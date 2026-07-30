@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deflection Testing</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables: override the example no-op with a scrolling block (FR-OB-5.1) */
+table { display: block; overflow-x: auto; border-collapse: collapse; margin: 1rem 0; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+th, td { border: 1px solid var(--border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /Users/igor/dev/llm/ak-llm-wiki/llm-wiki-tools/hierarchy_v2/07-hierarchy_concepts_lint -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">271 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-materials-and-mixtures.html">Concrete Materials &amp; Mixtures</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregates.html">Aggregates</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="carbonate-aggregate.html">Carbonate Aggregate</a></li><li><a href="iowa-pore-index.html">Iowa Pore Index</a></li><li><a href="lightweight-aggregate.html">Lightweight Aggregate</a></li><li><a href="mercury-intrusion-porosimetry.html">Mercury Intrusion Porosimetry</a></li><li><a href="recycled-concrete-aggregate.html">Recycled Concrete Aggregate</a></li><li><a href="rock-typing.html">Rock Typing</a></li></ul></details></li><li><a href="cementitious-materials-and-chemistry.html">Cementitious Materials &amp; Chemistry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bassanite.html">Bassanite</a></li><li><a href="chemical-admixtures-concrete.html">Chemical Admixtures for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entraining-agent.html">Air Entraining Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="micro-air.html">Micro Air®</a></li><li><a href="vinsol-resin.html">Vinsol Resin</a></li></ul></details></li><li><a href="cement-admixture-compatibility.html">Cement-Admixture Compatibility</a></li></ul></details></li><li><a href="interfacial-transition-zone.html">Interfacial Transition Zone</a></li><li><a href="supplementary-cementitious-materials.html">Supplementary Cementitious Materials</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="blended-cement.html">Blended Cement</a></li><li><a href="fly-ash.html">Fly Ash</a></li><li><a href="ground-granulated-blast-furnace-slag.html">Ground Granulated Blast-Furnace Slag</a></li><li><a href="pozzolanic-reaction.html">Pozzolanic Reaction</a></li><li><a href="silica-fume.html">Silica Fume</a></li><li><a href="ternary-mixture.html">Ternary Mixture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="performance-based-specification-for-ternary-mixtures.html">Performance-Based Specification for Ternary Mixtures</a></li></ul></details></li></ul></details></li><li><a href="type-k-shrinkage-compensating-cement.html">Type K Shrinkage-Compensating Cement</a></li></ul></details></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-resistant-glass-fibers.html">Alkali-Resistant Glass Fibers</a></li><li><a href="hybrid-fiber-reinforced-concrete.html">Hybrid Fiber-Reinforced Concrete</a></li><li><a href="polypropylene-microfibers.html">Polypropylene Microfibers</a></li><li><a href="polyvinyl-alcohol-fibers.html">Polyvinyl Alcohol Fibers</a></li><li><a href="synthetic-fiber-reinforcement.html">Synthetic Fiber Reinforcement</a></li></ul></details></li><li><a href="fresh-concrete-workability-and-mixing.html">Fresh Concrete, Workability &amp; Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="false-set-premature-stiffening.html">False Set / Premature Stiffening</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-c-359-test.html">Modified C 359 Test</a></li></ul></details></li><li><a href="retempering.html">Retempering</a></li><li><a href="two-stage-mixing.html">Two-Stage Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-shear-mixing.html">High Shear Mixing</a></li><li><a href="moisture-sensor-for-concrete.html">Moisture Sensor for Concrete</a></li><li><a href="slurry-premixing.html">Slurry Premixing</a></li><li><a href="specific-mixing-energy.html">Specific Mixing Energy</a></li></ul></details></li><li><a href="workability-of-concrete.html">Workability of Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cabrera-slump-value.html">Cabrera Slump Value</a></li><li><a href="compaction-densification-index.html">Compaction Densification Index</a></li><li><a href="excess-paste-theory.html">Excess Paste Theory</a></li><li><a href="green-strength.html">Green Strength</a></li><li><a href="gyratory-compactor-concrete.html">Gyratory Compactor (Concrete)</a></li><li><a href="vKelly-test.html">VKelly Test</a></li><li><a href="vibrating-slope-apparatus.html">Vibrating Slope Apparatus (VSA)</a></li><li><a href="workability-energy-index.html">Workability Energy Index</a></li></ul></details></li></ul></details></li><li><a href="hydration-heat-and-maturity.html">Hydration, Heat &amp; Maturity</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calorimetry.html">Calorimetry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="adiabatic-calorimeter.html">Adiabatic Calorimeter</a></li><li><a href="heat-index-method.html">Heat Index Method</a></li><li><a href="isothermal-calorimeter.html">Isothermal Calorimeter</a></li><li><a href="semi-adiabatic-calorimeter.html">Semi-adiabatic Calorimeter</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="coffee-cup-test.html">Coffee Cup Test</a></li><li><a href="dewar-test.html">Dewar Test</a></li></ul></details></li><li><a href="solution-calorimeter.html">Solution Calorimeter</a></li></ul></details></li><li><a href="cement-hydration.html">Cement Hydration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="degree-of-hydration.html">Degree of Hydration</a></li><li><a href="heat-of-hydration.html">Heat of Hydration</a></li><li><a href="heat-signature.html">Heat Signature</a></li><li><a href="initial-set.html">Initial Set</a></li><li><a href="thermogravimetric-analysis.html">Thermogravimetric Analysis</a></li></ul></details></li><li><a href="maturity-method.html">Maturity Method</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="activation-energy.html">Activation Energy</a></li><li><a href="datum-temperature.html">Datum Temperature</a></li><li><a href="maturity-testing-for-concrete-opening-strength.html">Maturity Testing for Concrete Opening Strength</a></li><li><a href="time-temperature-factor.html">Time-Temperature Factor</a></li></ul></details></li></ul></details></li><li><a href="mix-design-and-specialty-mixtures.html">Mix Design &amp; Specialty Mixtures</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="combined-aggregate-gradation.html">Combined Aggregate Gradation</a></li><li><a href="econocrete.html">Econocrete</a></li><li><a href="high-performance-concrete.html">High-Performance Concrete</a></li><li><a href="performance-based-mix-design.html">Performance-Based Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="critical-minimum-cementitious-content.html">Critical Minimum Cementitious Content</a></li><li><a href="vp-vvoid-ratio.html">Vp/Vvoid Ratio</a></li></ul></details></li><li><a href="performance-engineered-mixtures.html">Performance-Engineered Mixtures</a></li><li><a href="quality-management-concrete.html">Quality Management-Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-quality-management-concrete.html">Modified Quality Management Concrete (M-QMC)</a></li></ul></details></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="semi-flowable-self-consolidating-concrete.html">Semi-Flowable Self-Consolidating Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mini-paver.html">Mini-Paver</a></li><li><a href="sfscc-mix-proportioning-method.html">SFSCC Mix Proportioning Method</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="construction-and-equipment.html">Construction &amp; Equipment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-paving-construction.html">Concrete Paving Construction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="auto-float.html">Auto-Float</a></li><li><a href="dowel-basket-ripple.html">Dowel Basket Ripple</a></li><li><a href="gps-pavement-surface-mapping.html">GPS Pavement Surface Mapping</a></li><li><a href="intelligent-construction-systems.html">Intelligent Construction Systems</a></li><li><a href="knife-joint-former.html">Knife Joint Former</a></li><li><a href="longitudinal-joint-forming-knife.html">Longitudinal Joint Forming Knife</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="stringless-paving.html">Stringless Paving</a></li><li><a href="two-lift-paving.html">Two-Lift Paving</a></li></ul></details></li><li><a href="quality-assurance-and-field-testing.html">Quality Assurance &amp; Field Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mco-suite.html">MCO Suite of Tests</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mobile-concrete-research-lab.html">Mobile Concrete Research Lab</a></li></ul></details></li><li><a href="nuclear-gauge.html">Nuclear Gauge</a></li><li><a href="portable-x-ray-fluorescence.html">Portable X-Ray Fluorescence (XRF)</a></li><li><a href="thickness-index.html">Thickness Index</a></li></ul></details></li></ul></details></li><li><a href="durability-and-materials-related-distress.html">Durability &amp; Materials-Related Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analysis.html">Air-Void Analysis</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analyzer.html">Air Void Analyzer</a></li><li><a href="rapidair-test.html">RapidAir Test</a></li><li><a href="super-air-meter.html">Super Air Meter</a></li></ul></details></li><li><a href="freeze-thaw-durability.html">Freeze-Thaw Durability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="astm-c672-scaling-test.html">ASTM C672 — Standard Test Method for Scaling Resistance of Concrete Surfaces Exposed to Deicing Chemicals</a></li><li><a href="bnq-scaling-test.html">BNQ NQ 2621-900 — Quebec Scaling Test Method</a></li><li><a href="degree-of-saturation.html">Degree of Saturation</a></li><li><a href="deicing-salt-effects.html">Deicing Salt Effects</a></li><li><a href="one-dimensional-freezing.html">One-Dimensional Freezing</a></li></ul></details></li><li><a href="materials-related-distress.html">Materials-Related Distress (MRD)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-silica-reaction.html">Alkali-Silica Reaction</a></li><li><a href="d-cracking.html">D-Cracking</a></li><li><a href="ettringite-fill.html">Ettringite Fill</a></li><li><a href="premature-joint-deterioration.html">Premature Joint Deterioration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calcium-oxychloride-formation.html">Calcium Oxychloride Formation</a></li><li><a href="joint-deterioration-prevention.html">Joint Deterioration Prevention</a></li><li><a href="low-temperature-differential-scanning-calorimetry.html">Low-Temperature Differential Scanning Calorimetry (LT-DSC)</a></li><li><a href="paste-expansion-test.html">Paste Expansion Test</a></li></ul></details></li><li><a href="sulfate-attack.html">Sulfate Attack</a></li></ul></details></li><li><a href="transport-properties-and-permeability.html">Transport Properties &amp; Permeability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-permeability-test.html">Air Permeability Test</a></li><li><a href="drop-test.html">Drop Test</a></li><li><a href="low-permeability-concrete.html">Low-Permeability Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="electrical-conductivity-concrete.html">Electrical Conductivity of Concrete</a></li><li><a href="sorptivity.html">Sorptivity</a></li><li><a href="surface-resistivity.html">Surface Resistivity</a></li><li><a href="wenner-probe-surface-resistivity.html">Wenner Probe / Surface Resistivity</a></li></ul></details></li><li><a href="penetrating-sealers.html">Penetrating Sealers</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="contact-angle-measurement.html">Contact Angle Measurement</a></li></ul></details></li><li><a href="rapid-chloride-migration.html">Rapid Chloride Migration</a></li></ul></details></li></ul></details></li><li><a href="early-age-behavior-curing-and-distress.html">Early-Age Behavior, Curing &amp; Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-curing.html">Concrete Curing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curing-compounds.html">Curing Compounds</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="efficiency-index.html">Efficiency Index</a></li></ul></details></li><li><a href="internal-curing.html">Internal Curing</a></li><li><a href="vdot-accelerated-curing.html">VDOT Accelerated Curing Regime</a></li></ul></details></li><li><a href="curling-and-warping.html">Curling and Warping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curvature-iri.html">Curvature IRI</a></li><li><a href="deflection-ratio.html">Deflection Ratio</a></li><li><a href="degree-of-curvature-curling.html">Degree of Curvature</a></li><li><a href="equivalent-temperature-difference.html">Equivalent Temperature Difference</a></li><li><a href="pavement-curling.html">Pavement Curling</a></li><li><a href="pavement-warping.html">Pavement Warping</a></li><li><a href="pseudo-strain-gradient.html">Pseudo Strain Gradient (PSG)</a></li><li><a href="second-generation-curvature-index.html">Second-Generation Curvature Index (2GCI)</a></li></ul></details></li><li><a href="shrinkage-and-early-age-cracking.html">Shrinkage &amp; Early-Age Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="capillary-pressure-in-concrete.html">Capillary Pressure in Concrete</a></li><li><a href="coefficient-of-thermal-expansion-concrete.html">Coefficient of Thermal Expansion (Concrete)</a></li><li><a href="drying-shrinkage.html">Drying Shrinkage</a></li><li><a href="plastic-shrinkage-cracking.html">Plastic Shrinkage Cracking</a></li><li><a href="restrained-shrinkage-ring-test.html">Restrained Shrinkage Ring Test</a></li></ul></details></li></ul></details></li><li><a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection-testing.html" class="active" aria-current="page">Deflection Testing</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="continuous-deflection-testing.html">Continuous Deflection Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-speed-rigid-pavement-analyzer.html">High Speed Rigid Pavement Analyzer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="photogrammetry-pavement.html">Photogrammetry for Pavement Measurement</a></li><li><a href="position-coincident-measurement.html">Position-Coincident Measurement</a></li><li><a href="time-coincident-measurement.html">Time-Coincident Measurement</a></li></ul></details></li><li><a href="rolling-dynamic-deflectometer.html">Rolling Dynamic Deflectometer</a></li><li><a href="rolling-weight-deflectometer.html">Rolling Weight Deflectometer</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="backcalculation.html">Backcalculation</a></li></ul></details></li></ul></details></li><li><a href="electromagnetic-and-thermal-methods.html">Electromagnetic &amp; Thermal Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="eddy-current-testing-pavements.html">Eddy Current Testing for Pavements</a></li><li><a href="ground-penetrating-radar.html">Ground Penetrating Radar (GPR)</a></li><li><a href="infrared-thermography.html">Infrared Thermography</a></li></ul></details></li><li><a href="stress-wave-and-sonic-methods.html">Stress-Wave &amp; Sonic Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-coupled-surface-wave.html">Air-Coupled Surface Wave Sensing</a></li><li><a href="impact-echo.html">Impact-Echo</a></li><li><a href="mira-ultrasonic-testing.html">MIRA Ultrasonic Testing</a></li><li><a href="spectral-analysis-of-surface-waves.html">Spectral Analysis of Surface Waves (SASW)</a></li><li><a href="ultrasonic-pulse-velocity.html">Ultrasonic Pulse Velocity</a></li></ul></details></li><li><a href="surface-strength-and-condition.html">Surface Strength &amp; Condition</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-index.html">Pavement Condition Index</a></li><li><a href="schmidt-hammer.html">Schmidt Hammer</a></li></ul></details></li><li><a href="thickness-and-surface-imaging.html">Thickness &amp; Surface Imaging</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="scanning-laser-thickness-measurement.html">Scanning Laser Thickness Measurement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="point-cloud-processing-pavement.html">Point Cloud Processing for Pavement</a></li><li><a href="virtual-core.html">Virtual Core</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="preservation-and-rehabilitation.html">Preservation &amp; Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bcoa-concrete-overlay.html">Bonded Concrete Overlay on Asphalt (BCOA)</a></li><li><a href="bcoc-concrete-overlay.html">Bonded Concrete Overlay on Concrete (BCOC)</a></li><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="geotextile-bond-breaker.html">Geotextile Bond Breaker</a></li><li><a href="iowa-direct-shear-method.html">Iowa Direct Shear Method</a></li><li><a href="thin-whitetopping.html">Thin Whitetopping</a></li><li><a href="ubcoa-concrete-overlay.html">Unbonded Concrete Overlay on Asphalt (UBCOA)</a></li><li><a href="ubcoc-concrete-overlay.html">Unbonded Concrete Overlay on Concrete (UBCOC)</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="repair-and-recycling.html">Repair &amp; Recycling</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li><li><a href="structural-design-and-analysis.html">Structural Design &amp; Analysis</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joints-dowels-and-load-transfer.html">Joints, Dowels &amp; Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-pavement-joint.html">Concrete Pavement Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="demec-points.html">DEMEC Points</a></li><li><a href="dowel-bar.html">Dowel Bar</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-t253-test.html">AASHTO T253 Test Procedure</a></li><li><a href="dowel-bearing-stress.html">Dowel Bearing Stress</a></li><li><a href="dowel-oblonging.html">Dowel Oblonging</a></li><li><a href="elliptical-dowel.html">Elliptical Dowel</a></li><li><a href="fiber-reinforced-polymer-dowels.html">Fiber-Reinforced Polymer Dowels</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="accelerated-aging-frp.html">Accelerated Aging (FRP)</a></li></ul></details></li><li><a href="friberg-dowel-equations.html">Friberg Dowel Equations</a></li><li><a href="iosipescu-shear-test.html">Iosipescu Shear Test</a></li><li><a href="modulus-of-dowel-support.html">Modulus of Dowel Support</a></li></ul></details></li><li><a href="early-entry-sawing.html">Early Entry Sawing</a></li><li><a href="joint-activation.html">Joint Activation</a></li><li><a href="joint-faulting.html">Joint Faulting</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="faultmeter.html">Faultmeter</a></li></ul></details></li><li><a href="joint-opening.html">Joint Opening</a></li><li><a href="jri-plus-joint.html">JRI+ Joint</a></li><li><a href="load-transfer-efficiency.html">Load Transfer Efficiency</a></li><li><a href="sawing-window.html">Sawing Window</a></li></ul></details></li></ul></details></li><li><a href="pavement-analysis-software.html">Pavement Analysis Software</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diplomat.html">DIPLOMAT</a></li><li><a href="everfe.html">EverFE</a></li><li><a href="hiperpav.html">HIPERPAV</a></li><li><a href="illi-pave.html">ILLI-PAVE</a></li><li><a href="islab2000.html">ISLAB2000</a></li><li><a href="mechanistic-empirical-pavement-design-guide.html">Mechanistic-Empirical Pavement Design Guide</a></li></ul></details></li><li><a href="pavement-foundation-and-support.html">Pavement Foundation &amp; Support</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cement-treated-base.html">Cement Treated Base</a></li><li><a href="coefficient-of-drainage.html">Coefficient of Drainage</a></li><li><a href="core-hole-permeameter.html">Core Hole Permeameter</a></li><li><a href="dynamic-cone-penetrometer.html">Dynamic Cone Penetrometer</a></li><li><a href="geotextile-separator.html">Geotextile Separator</a></li><li><a href="loss-of-support.html">Loss of Support</a></li><li><a href="modulus-of-subgrade-reaction.html">Modulus of Subgrade Reaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-modulus-of-subgrade-reaction.html">Composite Modulus of Subgrade Reaction</a></li><li><a href="effective-composite-modulus-of-subgrade-reaction.html">Effective Composite Modulus of Subgrade Reaction</a></li></ul></details></li><li><a href="ring-infiltrometer.html">Ring Infiltrometer</a></li></ul></details></li><li><a href="slab-design-and-geometry.html">Slab Design &amp; Geometry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-spacing-effects-on-performance.html">Joint Spacing Effects on Performance</a></li><li><a href="ll-ratio.html">L/ℓ Ratio</a></li><li><a href="longitudinal-cracking.html">Longitudinal Cracking</a></li><li><a href="transverse-cracking.html">Transverse Cracking</a></li><li><a href="widened-concrete-slab.html">Widened Concrete Slab</a></li><li><a href="zero-maintenance-jointed-plain-concrete-pavement.html">Zero-Maintenance Jointed Plain Concrete Pavement</a></li></ul></details></li></ul></details></li><li><a href="surface-characteristics.html">Surface Characteristics</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-friction.html">Pavement Friction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="international-friction-index.html">International Friction Index (IFI)</a></li></ul></details></li><li><a href="pavement-noise.html">Pavement Noise</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="noise-zones.html">Noise Zones</a></li></ul></details></li><li><a href="pavement-smoothness.html">Pavement Smoothness</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dipstick-profiler.html">Dipstick Profiler</a></li><li><a href="gomaco-smoothness-indicator.html">GOMACO Smoothness Indicator (GSI)</a></li><li><a href="inclinometer-profiling.html">Inclinometer Profiling</a></li><li><a href="international-roughness-index.html">International Roughness Index (IRI)</a></li><li><a href="pavement-profile-scanner.html">Pavement Profile Scanner (PPS)</a></li><li><a href="profilograph.html">Profilograph</a></li><li><a href="real-time-profiler-rtp.html">Real Time Profiler (RTP)</a></li><li><a href="surpro-2000-profiler.html">SurPRO 2000 Profiler</a></li></ul></details></li><li><a href="pavement-texture.html">Pavement Texture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="exposed-aggregate-surface.html">Exposed Aggregate Surface</a></li></ul></details></li></ul></details></li><li><a href="sustainability-and-emerging-technologies.html">Sustainability &amp; Emerging Technologies</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="additive-manufacturing-concrete.html">Additive Manufacturing for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3d-concrete-printing.html">3D Concrete Printing</a></li><li><a href="3d-structured-light-scanning-system.html">3D Structured Light Scanning System</a></li><li><a href="key-properties-3d-printing-concrete.html">Key Properties of 3D Printing Concrete</a></li></ul></details></li><li><a href="concrete-pavement-sustainability.html">Concrete Pavement Sustainability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="life-cycle-cost-analysis.html">Life-Cycle Cost Analysis</a></li><li><a href="lifecycle-cost-analysis.html">Lifecycle Cost Analysis</a></li></ul></details></li><li><a href="pervious-concrete.html">Pervious Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pervious-concrete-pavement.html">Pervious Concrete Pavement</a></li></ul></details></li><li><a href="photocatalytic-concrete-pavement.html">Photocatalytic Concrete Pavement</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><span class="crumb-sep">›</span><a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a><span class="crumb-sep">›</span><span class="crumb-current">Deflection Testing</span></nav>
+<article><h1>Deflection Testing</h1>
+<div class="meta"><div class="part-of">Part of: <a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a></div><div><a class="tag" href="index.html?q=data-analysis">data-analysis</a><a class="tag" href="index.html?q=deflectometer">deflectometer</a><a class="tag" href="index.html?q=nondestructive-testing">nondestructive-testing</a><a class="tag" href="index.html?q=pavement-evaluation">pavement-evaluation</a><a class="tag" href="index.html?q=structural-evaluation">structural-evaluation</a></div><div>Also known as: <a href="index.html?q=Pavement%20Deflection%20Measurement">Pavement Deflection Measurement</a></div><div>Created 2026-07-28 06:45:51+00:00 · Updated 2026-07-30 00:04:50+00:00</div></div>
+<p>Deflection Testing comprises nondestructive methodologies that evaluate pavement structural integrity by applying controlled loads and measuring the resulting surface deformation to assess stiffness and condition. Continuous Deflection Testing employs moving-load strategies, where the High Speed Rigid Pavement Analyzer uses time-coincident sensors for joint efficiency in concrete, the Rolling Dynamic Deflectometer detects subsurface defects via rolling accelerometers under sinusoidal forces, and the Rolling Weight Deflectometer calculates deflection by comparing spatially coincident laser profiles at highway speeds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#pavement-deflection-measurement">Pavement Deflection Measurement</a></li><li><a href="#nondestructive-evaluation-techniques">Nondestructive Evaluation Techniques</a></li><li><a href="#structural-capacity-assessment">Structural Capacity Assessment</a></li><li><a href="#equipment-and-sensor-systems">Equipment And Sensor Systems</a></li><li><a href="#data-analysis-and-modeling">Data Analysis And Modeling</a></li><li><a href="#related-concepts">Related concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (11)</summary><div class="sources-body"><a href="#ref-3">Synthesis of Dowel Bar Research / Assessment of Dowel Bar Research (HR-1080) (2002)</a>, <a href="#ref-2">Development of In Situ Detection Methods for Materials-Related Distress (MRD) in Concrete Pavements: Phase 1 (CTRE 00-96) (2003)</a>, <a href="#ref-4">Design and Construction Procedures for Concrete Overlay and Widening of Existing Pavements (TR-511, Proj. 6) (2005)</a>, <a href="#ref-6">Long-Term Plan for Concrete Pavement Research and Technology—The Concrete Pavement Road Map (Second Generation): Volume II, Tracks (FHWA-HRT-11-070) (2012)</a>, <a href="#ref-10">Evaluation of Unbonded Ultrathin Whitetopping of Brick Streets (TR-466) (2006)</a>, <a href="#ref-8">Nondestructive Evaluation of Iowa Pavements, Phase 1 (2007)</a>, <a href="#ref-1">Development of a High Speed Rigid Pavement Analyzer – Phase I Feasibility and Need Study (2008)</a>, <a href="#ref-7">Improving Concrete Overlay Construction (TR-600) (2010)</a>, <a href="#ref-9">Optimizing Pavement Base, Subbase, and Subgrade Layers for Cost and Performance on Local Roads (2014)</a>, <a href="#ref-5">Impact of Curling and Warping on Concrete Pavement: Phase II (TR-749) (2023)</a>, <a href="#ref-11">Field Performance of Fiber-Reinforced Concrete Overlays (TR-816) (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (2)</summary><div class="subconcepts-body"><a href="continuous-deflection-testing.html">Continuous Deflection Testing</a> · <a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></div></details>
+<h2 id="pavement-deflection-measurement">Pavement Deflection Measurement</h2>
+<p>Pavement deflection measurement primarily utilizes the Falling Weight Deflectometer to apply dynamic impulse loads and capture the resulting deflection bowl, enabling the backcalculation of structural layer moduli and the assessment of load transfer efficiency across joints. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]–[<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>] While this method provides critical data for overlay design and distress identification, it is a stop-and-go process that contrasts with continuous testing approaches designed for higher-speed, system-wide data collection. [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>], [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p><img alt="Example of composite pavement deflected shape (9-kip load) (" src="assets/deflection-testing/a01bea50d531c4c6da88298b874c4ad84b006b403f078113e4640b2b317a4187.jpg" />
+<em>Example of composite pavement deflected shape (9-kip load) (cross-section view—exaggerated scale)</em> [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]</p>
+<h2 id="nondestructive-evaluation-techniques">Nondestructive Evaluation Techniques</h2>
+<p>Nondestructive evaluation techniques for deflection testing primarily utilize impulse load devices, such as the Falling Weight Deflectometer, to measure pavement structural response and back-calculate layer moduli without causing damage. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>], [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>] These methods involve applying dynamic loads and recording deflection basins with multiple sensors to assess structural integrity, evaluate load transfer efficiency at joints, and verify overlay design performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>], [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>], [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>] While traditional stop-and-go FWD testing provides detailed data for mechanistic analysis and artificial neural network modeling, emerging rolling wheel deflectometers offer continuous, high-speed alternatives to overcome operational limitations on active roadways. [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>], [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>], [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>]</p>
+<h2 id="structural-capacity-assessment">Structural Capacity Assessment</h2>
+<p>Structural capacity assessment leverages Falling Weight Deflectometer data to back-calculate layer moduli and evaluate load transfer efficiency, thereby quantifying the pavement&rsquo;s ability to withstand traffic loads. [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>], [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>] By analyzing deflection basins and isolating responses from specific components like dowel bars, engineers can verify overlay designs and detect critical distresses such as subgrade voids or joint degradation. [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>], [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>]</p>
+<p><img alt="Example of composite pavement deflected shape (9-kip load) (" src="assets/deflection-testing/7cdcc6cd0b97867a4f3fe9d30fcce38f3949e839f6091635834cca0d7b217481.jpg" />
+<em>Example of composite pavement deflected shape (9-kip load) (plan view—exaggerated scale)</em> [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]</p>
+<h2 id="equipment-and-sensor-systems">Equipment And Sensor Systems</h2>
+<p>Deflection testing equipment primarily utilizes the Falling Weight Deflectometer (FWD) to apply dynamic impulse loads and capture pavement response via arrays of displacement sensors, such as geophones or velocity transducers. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>], [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>] These systems generate deflection basins that are analyzed using backcalculation methods, including finite element modeling and artificial neural networks, to derive structural properties like layer moduli and load transfer efficiency. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>], [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>], [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>] While the FWD remains a standard for detailed structural assessment, alternative approaches like continuous testing aim to overcome operational limitations by enabling high-speed data collection. [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>], [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p><img alt="Schematic of FWD deflection sensors" src="assets/deflection-testing/80cea4770cca9cdfac22b388d21814320d312240c691a4a4603ae7d02732de5c.jpg" />
+<em>Schematic of FWD deflection sensors</em> [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]</p>
+<h2 id="data-analysis-and-modeling">Data Analysis And Modeling</h2>
+<p>Data analysis and modeling in deflection testing primarily utilize the Falling Weight Deflectometer to capture dynamic pavement responses, which are then processed through backcalculation techniques or Artificial Neural Networks to determine structural layer properties. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>], [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>] These analytical methods normalize deflection basin data to standard load and temperature conditions, enabling the computation of critical metrics such as Load Transfer Efficiency and subgrade modulus while accounting for complex factors like curling and warping. [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>], [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>]–[<sup><a href="#ref-11" aria-label="Reference 11">11</a></sup>]</p>
+<p><img alt="Schematic of the deflection basin under an FWD load plate" src="assets/deflection-testing/5cf7cbbc14251f85a016579a0ff9391752e943a330cdc30fb3ad0fa7129505aa.jpg" />
+<em>Schematic of the deflection basin under an FWD load plate</em> [<sup><a href="#ref-11" aria-label="Reference 11">11</a></sup>]</p>
+<h2 id="related-concepts">Related concepts</h2>
+<ul>
+<li><a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a></li>
+<li><a href="continuous-deflection-testing.html">Continuous Deflection Testing</a></li>
+<li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">B. M. Phares, H. Ceylan, R. Souleyrette, O. Smadi, and K. Gopalakrishnan, &quot;Development of a High Speed Rigid Pavement Analyzer – Phase I Feasibility and Need Study,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TPF-5(136), 2008. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/high_speed_pvmt_analyzer_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/high_speed_pvmt_analyzer_w_cvr.pdf</a></li><li id="ref-2">S. Schlorholtz, B. Dawson, and M. Scott, &quot;Development of In Situ Detection Methods for Materials-Related Distress (MRD) in Concrete Pavements: Phase 1,&quot; Center for Portland Cement Concrete Pavement Technology, Iowa State University, Ames, IA, Rep. CTRE 00-96, 2003. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/mrd.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/mrd.pdf</a></li><li id="ref-3">M. L. Porter and R. J. Guinn, Jr., &quot;Synthesis of Dowel Bar Research / Assessment of Dowel Bar Research,&quot; Center for Transportation Research and Education (CTRE), Iowa State University, Ames, IA, Rep. HR-1080, 2002. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/dowelbarsynthesis.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/dowelbarsynthesis.pdf</a></li><li id="ref-4">J. K. Cable, F. S. Fanous, H. Ceylan, D. Wood, D. Frentress, T. Tabbert, S. Y. Oh, and K. Gopalakrishnan, &quot;Design and Construction Procedures for Concrete Overlay and Widening of Existing Pavements,&quot; Center for Portland Cement Concrete Pavement Technology, Iowa State University, Ames, IA, Rep. TR-511, 2005. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/oreo_design.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/oreo_design.pdf</a></li><li id="ref-5">K. Tian, D. King, B. Yang, S. Kim, A. Alhasan, and H. Ceylan, &quot;Impact of Curling and Warping on Concrete Pavement: Phase II,&quot; Program for Sustainable Pavement Engineering and Research (PROSPER), Iowa State University, Ames, IA, Rep. TR-749, 2023. [Online]. Available: <a href="https://intrans.iastate.edu/app/uploads/2023/06/Impact_of_Curling_and_Warping_Phase_II_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://intrans.iastate.edu/app/uploads/2023/06/Impact_of_Curling_and_Warping_Phase_II_w_cvr.pdf</a></li><li id="ref-6">D. Harrington, R. Rasmussen, D. Merritt, T. Cackler, and P. Taylor, &quot;Long-Term Plan for Concrete Pavement Research and Technology—The Concrete Pavement Road Map (Second Generation): Volume II, Tracks (FHWA-HRT-11-070),&quot; National Center for Concrete Pavement Technology, Iowa State University, Ames, IA, 2012. [Online]. Available: <a href="https://www.fhwa.dot.gov/publications/research/infrastructure/pavements/pccp/11070/11070.pdf" rel="noopener noreferrer" target="_blank">https://www.fhwa.dot.gov/publications/research/infrastructure/pavements/pccp/11070/11070.pdf</a></li><li id="ref-7">P. D. Wiegand, J. K. Cable, T. Cackler, and D. Harrington, &quot;Improving Concrete Overlay Construction,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TR-600, 2010. [Online]. Available: <a href="http://publications.iowa.gov/20076/1/IADOT_tr_600_Improving_Concrete_Overlay_Construction_2010.pdf" rel="noopener noreferrer" target="_blank">http://publications.iowa.gov/20076/1/IADOT_tr_600_Improving_Concrete_Overlay_Construction_2010.pdf</a></li><li id="ref-8">H. Ceylan, A. Guclu, M. B. Bayrak, and K. Gopalakrishnan, &quot;Nondestructive Evaluation of Iowa Pavements, Phase 1,&quot; CTRE, Iowa State University, Ames, IA, Rep. CTRE 04-177, 2007. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/nde-pavements.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/nde-pavements.pdf</a></li><li id="ref-9">D. White and P. Vennapusa, &quot;Optimizing Pavement Base, Subbase, and Subgrade Layers for Cost and Performance on Local Roads,&quot; Concrete Pavement Technology Center and Center for Earthworks Engineering Research, Ames, IA, Rep. TR-640, 2014. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/local_rd_pvmt_optimization_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/local_rd_pvmt_optimization_w_cvr.pdf</a></li><li id="ref-10">J. K. Cable and J. Williams, &quot;Evaluation of Unbonded Ultrathin Whitetopping of Brick Streets,&quot; CTRE, Iowa State University, Ames, IA, Rep. TR-466, 2006. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/whitetopping.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/whitetopping.pdf</a></li><li id="ref-11">D. King, B. Yang, P. Taylor, and H. Ceylan, &quot;Field Performance of Fiber-Reinforced Concrete Overlays,&quot; Institute for Transportation, Iowa State University, Ames, IA, Rep. TR-816, 2025. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2025/05/field_performance_of_frc_overlays_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2025/05/field_performance_of_frc_overlays_w_cvr.pdf</a></li>
+</ol>
+</section></article>
+</main>
+</div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sawing Window</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables: override the example no-op with a scrolling block (FR-OB-5.1) */
+table { display: block; overflow-x: auto; border-collapse: collapse; margin: 1rem 0; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+th, td { border: 1px solid var(--border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /Users/igor/dev/llm/ak-llm-wiki/llm-wiki-tools/hierarchy_v2/07-hierarchy_concepts_lint -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">271 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-materials-and-mixtures.html">Concrete Materials &amp; Mixtures</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregates.html">Aggregates</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="carbonate-aggregate.html">Carbonate Aggregate</a></li><li><a href="iowa-pore-index.html">Iowa Pore Index</a></li><li><a href="lightweight-aggregate.html">Lightweight Aggregate</a></li><li><a href="mercury-intrusion-porosimetry.html">Mercury Intrusion Porosimetry</a></li><li><a href="recycled-concrete-aggregate.html">Recycled Concrete Aggregate</a></li><li><a href="rock-typing.html">Rock Typing</a></li></ul></details></li><li><a href="cementitious-materials-and-chemistry.html">Cementitious Materials &amp; Chemistry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bassanite.html">Bassanite</a></li><li><a href="chemical-admixtures-concrete.html">Chemical Admixtures for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entraining-agent.html">Air Entraining Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="micro-air.html">Micro Air®</a></li><li><a href="vinsol-resin.html">Vinsol Resin</a></li></ul></details></li><li><a href="cement-admixture-compatibility.html">Cement-Admixture Compatibility</a></li></ul></details></li><li><a href="interfacial-transition-zone.html">Interfacial Transition Zone</a></li><li><a href="supplementary-cementitious-materials.html">Supplementary Cementitious Materials</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="blended-cement.html">Blended Cement</a></li><li><a href="fly-ash.html">Fly Ash</a></li><li><a href="ground-granulated-blast-furnace-slag.html">Ground Granulated Blast-Furnace Slag</a></li><li><a href="pozzolanic-reaction.html">Pozzolanic Reaction</a></li><li><a href="silica-fume.html">Silica Fume</a></li><li><a href="ternary-mixture.html">Ternary Mixture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="performance-based-specification-for-ternary-mixtures.html">Performance-Based Specification for Ternary Mixtures</a></li></ul></details></li></ul></details></li><li><a href="type-k-shrinkage-compensating-cement.html">Type K Shrinkage-Compensating Cement</a></li></ul></details></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-resistant-glass-fibers.html">Alkali-Resistant Glass Fibers</a></li><li><a href="hybrid-fiber-reinforced-concrete.html">Hybrid Fiber-Reinforced Concrete</a></li><li><a href="polypropylene-microfibers.html">Polypropylene Microfibers</a></li><li><a href="polyvinyl-alcohol-fibers.html">Polyvinyl Alcohol Fibers</a></li><li><a href="synthetic-fiber-reinforcement.html">Synthetic Fiber Reinforcement</a></li></ul></details></li><li><a href="fresh-concrete-workability-and-mixing.html">Fresh Concrete, Workability &amp; Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="false-set-premature-stiffening.html">False Set / Premature Stiffening</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-c-359-test.html">Modified C 359 Test</a></li></ul></details></li><li><a href="retempering.html">Retempering</a></li><li><a href="two-stage-mixing.html">Two-Stage Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-shear-mixing.html">High Shear Mixing</a></li><li><a href="moisture-sensor-for-concrete.html">Moisture Sensor for Concrete</a></li><li><a href="slurry-premixing.html">Slurry Premixing</a></li><li><a href="specific-mixing-energy.html">Specific Mixing Energy</a></li></ul></details></li><li><a href="workability-of-concrete.html">Workability of Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cabrera-slump-value.html">Cabrera Slump Value</a></li><li><a href="compaction-densification-index.html">Compaction Densification Index</a></li><li><a href="excess-paste-theory.html">Excess Paste Theory</a></li><li><a href="green-strength.html">Green Strength</a></li><li><a href="gyratory-compactor-concrete.html">Gyratory Compactor (Concrete)</a></li><li><a href="vKelly-test.html">VKelly Test</a></li><li><a href="vibrating-slope-apparatus.html">Vibrating Slope Apparatus (VSA)</a></li><li><a href="workability-energy-index.html">Workability Energy Index</a></li></ul></details></li></ul></details></li><li><a href="hydration-heat-and-maturity.html">Hydration, Heat &amp; Maturity</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calorimetry.html">Calorimetry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="adiabatic-calorimeter.html">Adiabatic Calorimeter</a></li><li><a href="heat-index-method.html">Heat Index Method</a></li><li><a href="isothermal-calorimeter.html">Isothermal Calorimeter</a></li><li><a href="semi-adiabatic-calorimeter.html">Semi-adiabatic Calorimeter</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="coffee-cup-test.html">Coffee Cup Test</a></li><li><a href="dewar-test.html">Dewar Test</a></li></ul></details></li><li><a href="solution-calorimeter.html">Solution Calorimeter</a></li></ul></details></li><li><a href="cement-hydration.html">Cement Hydration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="degree-of-hydration.html">Degree of Hydration</a></li><li><a href="heat-of-hydration.html">Heat of Hydration</a></li><li><a href="heat-signature.html">Heat Signature</a></li><li><a href="initial-set.html">Initial Set</a></li><li><a href="thermogravimetric-analysis.html">Thermogravimetric Analysis</a></li></ul></details></li><li><a href="maturity-method.html">Maturity Method</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="activation-energy.html">Activation Energy</a></li><li><a href="datum-temperature.html">Datum Temperature</a></li><li><a href="maturity-testing-for-concrete-opening-strength.html">Maturity Testing for Concrete Opening Strength</a></li><li><a href="time-temperature-factor.html">Time-Temperature Factor</a></li></ul></details></li></ul></details></li><li><a href="mix-design-and-specialty-mixtures.html">Mix Design &amp; Specialty Mixtures</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="combined-aggregate-gradation.html">Combined Aggregate Gradation</a></li><li><a href="econocrete.html">Econocrete</a></li><li><a href="high-performance-concrete.html">High-Performance Concrete</a></li><li><a href="performance-based-mix-design.html">Performance-Based Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="critical-minimum-cementitious-content.html">Critical Minimum Cementitious Content</a></li><li><a href="vp-vvoid-ratio.html">Vp/Vvoid Ratio</a></li></ul></details></li><li><a href="performance-engineered-mixtures.html">Performance-Engineered Mixtures</a></li><li><a href="quality-management-concrete.html">Quality Management-Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-quality-management-concrete.html">Modified Quality Management Concrete (M-QMC)</a></li></ul></details></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="semi-flowable-self-consolidating-concrete.html">Semi-Flowable Self-Consolidating Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mini-paver.html">Mini-Paver</a></li><li><a href="sfscc-mix-proportioning-method.html">SFSCC Mix Proportioning Method</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="construction-and-equipment.html">Construction &amp; Equipment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-paving-construction.html">Concrete Paving Construction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="auto-float.html">Auto-Float</a></li><li><a href="dowel-basket-ripple.html">Dowel Basket Ripple</a></li><li><a href="gps-pavement-surface-mapping.html">GPS Pavement Surface Mapping</a></li><li><a href="intelligent-construction-systems.html">Intelligent Construction Systems</a></li><li><a href="knife-joint-former.html">Knife Joint Former</a></li><li><a href="longitudinal-joint-forming-knife.html">Longitudinal Joint Forming Knife</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="stringless-paving.html">Stringless Paving</a></li><li><a href="two-lift-paving.html">Two-Lift Paving</a></li></ul></details></li><li><a href="quality-assurance-and-field-testing.html">Quality Assurance &amp; Field Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mco-suite.html">MCO Suite of Tests</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mobile-concrete-research-lab.html">Mobile Concrete Research Lab</a></li></ul></details></li><li><a href="nuclear-gauge.html">Nuclear Gauge</a></li><li><a href="portable-x-ray-fluorescence.html">Portable X-Ray Fluorescence (XRF)</a></li><li><a href="thickness-index.html">Thickness Index</a></li></ul></details></li></ul></details></li><li><a href="durability-and-materials-related-distress.html">Durability &amp; Materials-Related Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analysis.html">Air-Void Analysis</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analyzer.html">Air Void Analyzer</a></li><li><a href="rapidair-test.html">RapidAir Test</a></li><li><a href="super-air-meter.html">Super Air Meter</a></li></ul></details></li><li><a href="freeze-thaw-durability.html">Freeze-Thaw Durability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="astm-c672-scaling-test.html">ASTM C672 — Standard Test Method for Scaling Resistance of Concrete Surfaces Exposed to Deicing Chemicals</a></li><li><a href="bnq-scaling-test.html">BNQ NQ 2621-900 — Quebec Scaling Test Method</a></li><li><a href="degree-of-saturation.html">Degree of Saturation</a></li><li><a href="deicing-salt-effects.html">Deicing Salt Effects</a></li><li><a href="one-dimensional-freezing.html">One-Dimensional Freezing</a></li></ul></details></li><li><a href="materials-related-distress.html">Materials-Related Distress (MRD)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-silica-reaction.html">Alkali-Silica Reaction</a></li><li><a href="d-cracking.html">D-Cracking</a></li><li><a href="ettringite-fill.html">Ettringite Fill</a></li><li><a href="premature-joint-deterioration.html">Premature Joint Deterioration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calcium-oxychloride-formation.html">Calcium Oxychloride Formation</a></li><li><a href="joint-deterioration-prevention.html">Joint Deterioration Prevention</a></li><li><a href="low-temperature-differential-scanning-calorimetry.html">Low-Temperature Differential Scanning Calorimetry (LT-DSC)</a></li><li><a href="paste-expansion-test.html">Paste Expansion Test</a></li></ul></details></li><li><a href="sulfate-attack.html">Sulfate Attack</a></li></ul></details></li><li><a href="transport-properties-and-permeability.html">Transport Properties &amp; Permeability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-permeability-test.html">Air Permeability Test</a></li><li><a href="drop-test.html">Drop Test</a></li><li><a href="low-permeability-concrete.html">Low-Permeability Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="electrical-conductivity-concrete.html">Electrical Conductivity of Concrete</a></li><li><a href="sorptivity.html">Sorptivity</a></li><li><a href="surface-resistivity.html">Surface Resistivity</a></li><li><a href="wenner-probe-surface-resistivity.html">Wenner Probe / Surface Resistivity</a></li></ul></details></li><li><a href="penetrating-sealers.html">Penetrating Sealers</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="contact-angle-measurement.html">Contact Angle Measurement</a></li></ul></details></li><li><a href="rapid-chloride-migration.html">Rapid Chloride Migration</a></li></ul></details></li></ul></details></li><li><a href="early-age-behavior-curing-and-distress.html">Early-Age Behavior, Curing &amp; Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-curing.html">Concrete Curing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curing-compounds.html">Curing Compounds</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="efficiency-index.html">Efficiency Index</a></li></ul></details></li><li><a href="internal-curing.html">Internal Curing</a></li><li><a href="vdot-accelerated-curing.html">VDOT Accelerated Curing Regime</a></li></ul></details></li><li><a href="curling-and-warping.html">Curling and Warping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curvature-iri.html">Curvature IRI</a></li><li><a href="deflection-ratio.html">Deflection Ratio</a></li><li><a href="degree-of-curvature-curling.html">Degree of Curvature</a></li><li><a href="equivalent-temperature-difference.html">Equivalent Temperature Difference</a></li><li><a href="pavement-curling.html">Pavement Curling</a></li><li><a href="pavement-warping.html">Pavement Warping</a></li><li><a href="pseudo-strain-gradient.html">Pseudo Strain Gradient (PSG)</a></li><li><a href="second-generation-curvature-index.html">Second-Generation Curvature Index (2GCI)</a></li></ul></details></li><li><a href="shrinkage-and-early-age-cracking.html">Shrinkage &amp; Early-Age Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="capillary-pressure-in-concrete.html">Capillary Pressure in Concrete</a></li><li><a href="coefficient-of-thermal-expansion-concrete.html">Coefficient of Thermal Expansion (Concrete)</a></li><li><a href="drying-shrinkage.html">Drying Shrinkage</a></li><li><a href="plastic-shrinkage-cracking.html">Plastic Shrinkage Cracking</a></li><li><a href="restrained-shrinkage-ring-test.html">Restrained Shrinkage Ring Test</a></li></ul></details></li></ul></details></li><li><a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection-testing.html">Deflection Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="continuous-deflection-testing.html">Continuous Deflection Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-speed-rigid-pavement-analyzer.html">High Speed Rigid Pavement Analyzer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="photogrammetry-pavement.html">Photogrammetry for Pavement Measurement</a></li><li><a href="position-coincident-measurement.html">Position-Coincident Measurement</a></li><li><a href="time-coincident-measurement.html">Time-Coincident Measurement</a></li></ul></details></li><li><a href="rolling-dynamic-deflectometer.html">Rolling Dynamic Deflectometer</a></li><li><a href="rolling-weight-deflectometer.html">Rolling Weight Deflectometer</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="backcalculation.html">Backcalculation</a></li></ul></details></li></ul></details></li><li><a href="electromagnetic-and-thermal-methods.html">Electromagnetic &amp; Thermal Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="eddy-current-testing-pavements.html">Eddy Current Testing for Pavements</a></li><li><a href="ground-penetrating-radar.html">Ground Penetrating Radar (GPR)</a></li><li><a href="infrared-thermography.html">Infrared Thermography</a></li></ul></details></li><li><a href="stress-wave-and-sonic-methods.html">Stress-Wave &amp; Sonic Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-coupled-surface-wave.html">Air-Coupled Surface Wave Sensing</a></li><li><a href="impact-echo.html">Impact-Echo</a></li><li><a href="mira-ultrasonic-testing.html">MIRA Ultrasonic Testing</a></li><li><a href="spectral-analysis-of-surface-waves.html">Spectral Analysis of Surface Waves (SASW)</a></li><li><a href="ultrasonic-pulse-velocity.html">Ultrasonic Pulse Velocity</a></li></ul></details></li><li><a href="surface-strength-and-condition.html">Surface Strength &amp; Condition</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-index.html">Pavement Condition Index</a></li><li><a href="schmidt-hammer.html">Schmidt Hammer</a></li></ul></details></li><li><a href="thickness-and-surface-imaging.html">Thickness &amp; Surface Imaging</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="scanning-laser-thickness-measurement.html">Scanning Laser Thickness Measurement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="point-cloud-processing-pavement.html">Point Cloud Processing for Pavement</a></li><li><a href="virtual-core.html">Virtual Core</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="preservation-and-rehabilitation.html">Preservation &amp; Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bcoa-concrete-overlay.html">Bonded Concrete Overlay on Asphalt (BCOA)</a></li><li><a href="bcoc-concrete-overlay.html">Bonded Concrete Overlay on Concrete (BCOC)</a></li><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="geotextile-bond-breaker.html">Geotextile Bond Breaker</a></li><li><a href="iowa-direct-shear-method.html">Iowa Direct Shear Method</a></li><li><a href="thin-whitetopping.html">Thin Whitetopping</a></li><li><a href="ubcoa-concrete-overlay.html">Unbonded Concrete Overlay on Asphalt (UBCOA)</a></li><li><a href="ubcoc-concrete-overlay.html">Unbonded Concrete Overlay on Concrete (UBCOC)</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="repair-and-recycling.html">Repair &amp; Recycling</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li><li><a href="structural-design-and-analysis.html">Structural Design &amp; Analysis</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joints-dowels-and-load-transfer.html">Joints, Dowels &amp; Load Transfer</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-pavement-joint.html">Concrete Pavement Joint</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="demec-points.html">DEMEC Points</a></li><li><a href="dowel-bar.html">Dowel Bar</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-t253-test.html">AASHTO T253 Test Procedure</a></li><li><a href="dowel-bearing-stress.html">Dowel Bearing Stress</a></li><li><a href="dowel-oblonging.html">Dowel Oblonging</a></li><li><a href="elliptical-dowel.html">Elliptical Dowel</a></li><li><a href="fiber-reinforced-polymer-dowels.html">Fiber-Reinforced Polymer Dowels</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="accelerated-aging-frp.html">Accelerated Aging (FRP)</a></li></ul></details></li><li><a href="friberg-dowel-equations.html">Friberg Dowel Equations</a></li><li><a href="iosipescu-shear-test.html">Iosipescu Shear Test</a></li><li><a href="modulus-of-dowel-support.html">Modulus of Dowel Support</a></li></ul></details></li><li><a href="early-entry-sawing.html">Early Entry Sawing</a></li><li><a href="joint-activation.html">Joint Activation</a></li><li><a href="joint-faulting.html">Joint Faulting</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="faultmeter.html">Faultmeter</a></li></ul></details></li><li><a href="joint-opening.html">Joint Opening</a></li><li><a href="jri-plus-joint.html">JRI+ Joint</a></li><li><a href="load-transfer-efficiency.html">Load Transfer Efficiency</a></li><li><a href="sawing-window.html" class="active" aria-current="page">Sawing Window</a></li></ul></details></li></ul></details></li><li><a href="pavement-analysis-software.html">Pavement Analysis Software</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diplomat.html">DIPLOMAT</a></li><li><a href="everfe.html">EverFE</a></li><li><a href="hiperpav.html">HIPERPAV</a></li><li><a href="illi-pave.html">ILLI-PAVE</a></li><li><a href="islab2000.html">ISLAB2000</a></li><li><a href="mechanistic-empirical-pavement-design-guide.html">Mechanistic-Empirical Pavement Design Guide</a></li></ul></details></li><li><a href="pavement-foundation-and-support.html">Pavement Foundation &amp; Support</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cement-treated-base.html">Cement Treated Base</a></li><li><a href="coefficient-of-drainage.html">Coefficient of Drainage</a></li><li><a href="core-hole-permeameter.html">Core Hole Permeameter</a></li><li><a href="dynamic-cone-penetrometer.html">Dynamic Cone Penetrometer</a></li><li><a href="geotextile-separator.html">Geotextile Separator</a></li><li><a href="loss-of-support.html">Loss of Support</a></li><li><a href="modulus-of-subgrade-reaction.html">Modulus of Subgrade Reaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-modulus-of-subgrade-reaction.html">Composite Modulus of Subgrade Reaction</a></li><li><a href="effective-composite-modulus-of-subgrade-reaction.html">Effective Composite Modulus of Subgrade Reaction</a></li></ul></details></li><li><a href="ring-infiltrometer.html">Ring Infiltrometer</a></li></ul></details></li><li><a href="slab-design-and-geometry.html">Slab Design &amp; Geometry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-spacing-effects-on-performance.html">Joint Spacing Effects on Performance</a></li><li><a href="ll-ratio.html">L/ℓ Ratio</a></li><li><a href="longitudinal-cracking.html">Longitudinal Cracking</a></li><li><a href="transverse-cracking.html">Transverse Cracking</a></li><li><a href="widened-concrete-slab.html">Widened Concrete Slab</a></li><li><a href="zero-maintenance-jointed-plain-concrete-pavement.html">Zero-Maintenance Jointed Plain Concrete Pavement</a></li></ul></details></li></ul></details></li><li><a href="surface-characteristics.html">Surface Characteristics</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-friction.html">Pavement Friction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="international-friction-index.html">International Friction Index (IFI)</a></li></ul></details></li><li><a href="pavement-noise.html">Pavement Noise</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="noise-zones.html">Noise Zones</a></li></ul></details></li><li><a href="pavement-smoothness.html">Pavement Smoothness</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dipstick-profiler.html">Dipstick Profiler</a></li><li><a href="gomaco-smoothness-indicator.html">GOMACO Smoothness Indicator (GSI)</a></li><li><a href="inclinometer-profiling.html">Inclinometer Profiling</a></li><li><a href="international-roughness-index.html">International Roughness Index (IRI)</a></li><li><a href="pavement-profile-scanner.html">Pavement Profile Scanner (PPS)</a></li><li><a href="profilograph.html">Profilograph</a></li><li><a href="real-time-profiler-rtp.html">Real Time Profiler (RTP)</a></li><li><a href="surpro-2000-profiler.html">SurPRO 2000 Profiler</a></li></ul></details></li><li><a href="pavement-texture.html">Pavement Texture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="exposed-aggregate-surface.html">Exposed Aggregate Surface</a></li></ul></details></li></ul></details></li><li><a href="sustainability-and-emerging-technologies.html">Sustainability &amp; Emerging Technologies</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="additive-manufacturing-concrete.html">Additive Manufacturing for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3d-concrete-printing.html">3D Concrete Printing</a></li><li><a href="3d-structured-light-scanning-system.html">3D Structured Light Scanning System</a></li><li><a href="key-properties-3d-printing-concrete.html">Key Properties of 3D Printing Concrete</a></li></ul></details></li><li><a href="concrete-pavement-sustainability.html">Concrete Pavement Sustainability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="life-cycle-cost-analysis.html">Life-Cycle Cost Analysis</a></li><li><a href="lifecycle-cost-analysis.html">Lifecycle Cost Analysis</a></li></ul></details></li><li><a href="pervious-concrete.html">Pervious Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pervious-concrete-pavement.html">Pervious Concrete Pavement</a></li></ul></details></li><li><a href="photocatalytic-concrete-pavement.html">Photocatalytic Concrete Pavement</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><span class="crumb-sep">›</span><a href="structural-design-and-analysis.html">Structural Design &amp; Analysis</a><span class="crumb-sep">›</span><a href="joints-dowels-and-load-transfer.html">Joints, Dowels &amp; Load Transfer</a><span class="crumb-sep">›</span><a href="concrete-pavement-joint.html">Concrete Pavement Joint</a><span class="crumb-sep">›</span><span class="crumb-current">Sawing Window</span></nav>
+<article><h1>Sawing Window</h1>
+<div class="meta"><div class="part-of">Part of: <a href="concrete-pavement-joint.html">Concrete Pavement Joint</a></div><div><a class="tag" href="index.html?q=concrete-pavement">concrete-pavement</a><a class="tag" href="index.html?q=construction">construction</a><a class="tag" href="index.html?q=joints">joints</a><a class="tag" href="index.html?q=saw-cutting">saw-cutting</a></div><div>Also known as: <a href="index.html?q=pavement%20sawing%20time">pavement sawing time</a>, <a href="index.html?q=saw-cutting%20window">saw-cutting window</a></div><div>Created 2026-07-22 00:00:00+00:00 · Updated 2026-07-30 00:04:50+00:00</div></div>
+<p>The period during which saw cuts should be conducted on freshly placed concrete pavement joints to prevent random cracking without excessive raveling. The window starts after <a href="initial-set.html">Initial Set</a> and before drying begins. <a href="early-entry-sawing.html">Early entry sawing</a> (with a protective shoe) can begin slightly earlier than conventional sawing. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#introduction-to-sawing-windows">Introduction to Sawing Windows</a></li><li><a href="#factors-influencing-setting-and-sawing-time">Factors Influencing Setting and Sawing Time</a></li><li><a href="#consequences-of-incorrect-timing">Consequences of Incorrect Timing</a></li><li><a href="#predicting-sawing-times-via-upv-and-calorimetry">Predicting Sawing Times via UPV and Calorimetry</a></li><li><a href="#practical-field-implementation-and-calibration">Practical Field Implementation and Calibration</a></li><li><a href="#alternative-joint-formation-methods">Alternative Joint Formation Methods</a></li><li><a href="#design-parameters-for-ultrathin-overlays">Design Parameters for Ultrathin Overlays</a></li><li><a href="#sawing-depth-specifications">Sawing Depth Specifications</a></li><li><a href="#related">Related</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (10)</summary><div class="sources-body"><a href="#ref-9">Evaluation of Transverse Joint Forming Methods for PCC Pavement (TR-532) (2006)</a>, <a href="#ref-10">Evaluation of Unbonded Ultrathin Whitetopping of Brick Streets (TR-466) (2006)</a>, <a href="#ref-6">Developing a Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures (Phase 3) (2006)</a>, <a href="#ref-7">Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures, Phase 2 (2007)</a>, <a href="#ref-2">Crack Development in Ternary Mix Concrete Utilizing Various Saw Depths (TR-587) (2009)</a>, <a href="#ref-5">Concrete Overlay Field Application Program, Final Report: Volume I (2012)</a>, <a href="#ref-3">Concrete Pavement MDA: Comparison of Setting Time Measured Using Ultrasonic Wave Propagation With Saw-Cutting Times on Pavements in Iowa (2014)</a>, <a href="#ref-1">Comparison of Setting Time Measured Using Ultrasonic Wave Propagation with Saw-Cutting Times on Pavements (2015)</a>, <a href="#ref-8">Evaluation of Modified Concrete Mixture Proportions for the City of West Des Moines (2016)</a>, <a href="#ref-4">Prevention of Longitudinal Cracking in Iowa Widened Concrete Pavement (IHRB TR-700) (2018)</a></div></details>
+
+<h2 id="introduction-to-sawing-windows">Introduction to Sawing Windows</h2>
+<p>Early entry sawing is typically performed using lightweight equipment at an age of 1 to 4 hours after paving, cutting a shallow notch approximately 1.0 to 1.5 inches deep. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><img alt="Contrast in joints with different saw cut depths" src="assets/sawing-window/052691eb94dff6758bb5ba7b3e8fd49c08bf12cf691439193be67552ac39288d.jpg" />
+<em>Contrast in joints with different saw cut depths</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><img alt="A typical early entry saw-cutting process" src="assets/sawing-window/faffe047b488e8b04c94d7ba68c9ad48cf355c4e3e845b0f8e9fe75e26273f22.jpg" />
+<em>A typical early entry saw-cutting process</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="factors-influencing-setting-and-sawing-time">Factors Influencing Setting and Sawing Time</h2>
+<p>The sawing window is governed by several factors, including the rate of hydration—the same factor that influences initial set—and the hardness of coarse aggregate, which affects cutting difficulty but did not systematically shift the <a href="ultrasonic-pulse-velocity.html">UPV</a>-sawing correlation in Taylor &amp; Wang 2015 [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Harder <a href="aggregates.html">aggregates</a>, such as quartzite, do not systematically shift the correlation between UPV measurements and sawing times compared to softer aggregates like limestone, suggesting that aggregate hardness affects cutting difficulty but does not alter the fundamental setting-to-sawing relationship [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Ambient temperature also plays a critical role; higher temperatures shorten the elapsed sawing time, with a steeper slope for conventional sawing (−11.1 min/°F) versus early entry (−5.6 min/°F). Variations in setting times are primarily driven by the temperature of the concrete mixture rather than other factors, as higher mixture temperatures accelerate hydration and thereby shorten the elapsed time to reach the required saw strength [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Furthermore, the timing of paving affects the sawing window because morning pours experience higher maximum temperatures, greater solar radiation, and consequently shorter windows for cutting compared to afternoon paving [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]. The window eventually closes when drying begins, a process influenced by hydration and environmental exposure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Empirical data indicates that for early entry sawing, cutting should commence approximately 220 minutes after initial set is observed, as the rate of hydration remains similar across mixtures once it begins; this constant time interval applies regardless of the specific initial set duration [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>].</p>
+<p><img alt="Comparison of setting and average air temperature" src="assets/sawing-window/5811be2b16620a2717383d5ab6049202d3f8c503a1558165df332f50902e8b92.jpg" />
+<em>Comparison of setting and average air temperature</em> [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]</p>
+<p>Environmental and structural conditions further influence pavement integrity and sawing requirements. In cooler weather, concrete overlays can set from the bottom up, which delays the sawing window; temporarily covering the overlay with plastic after paving helps the concrete set properly to allow for timely sawing [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]. To prevent cracking caused by nighttime contraction of the underlying pavement during cool-weather paving, specifying a minimum overlay mix temperature of 65°F ensures the overlay reaches saw strength before the existing pavement contracts [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]. Additionally, stabilized bases create higher friction between the concrete layer and subbase compared to granular bases, increasing tensile stress from bond restraints and potentially leading to inadequate effective saw cut depth for crack control [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]. These stresses are relevant given that the theoretical free expansion of a 20-foot PCC slab due to daily temperature differences ranges between 0.011 and 0.033 inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><img alt="Factors affecting the extent of longitudinal cracking: (a) w" src="assets/sawing-window/3c91c288099a1e4775ea1515a339ca31d33074dda6e5c58aa5f5989c13d48665.jpg" />
+<em>Factors affecting the extent of longitudinal cracking: (a) weather conditions, (b) types of base course, (c) slab thickness, (d) slab width, and (e) concrete strength</em> [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]</p>
+<h2 id="consequences-of-incorrect-timing">Consequences of Incorrect Timing</h2>
+<p>Improper timing of sawing operations can lead to significant structural issues; sawing too early results in raveling, characterized by rough cut edges and aggregate pullout, while sawing too late causes random cracking as uncontrolled cracks develop before joints are cut [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Both of these outcomes lead to disputes, slab replacement, and increased costs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. To mitigate these risks, sawing operations must maintain a pace similar to paving, as sawing that lags significantly behind the paver due to insufficient equipment or staff increases the risk of random cracking even if initial set timing is correct [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Additionally, worn saw blades must be avoided during operations because they cause inconsistent cutting depths that can induce uncontrolled cracking in the pavement [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>].</p>
+<h2 id="predicting-sawing-times-via-upv-and-calorimetry">Predicting Sawing Times via UPV and Calorimetry</h2>
+<p>Heat signature curves derived from <a href="calorimetry.html">calorimetry</a> can identify incompatibility problems between cementitious materials and admixtures, which is critical when unexpected changes in material suppliers or batch compositions occur [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]. Within this context, the maximum of the first derivative of the semi-adiabatic temperature curve is correlated to final set, while the maximum of the second derivative is correlated to initial set [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]. Furthermore, calorimetry tests can be utilized as an input parameter within the <a href="hiperpav.html">HIPERPAV</a> II software to predict early-age pavement strength and stress development, thereby improving the reliability of performance analysis for concrete pavements [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>].</p>
+<p><img alt="Effect of curing temperature on heat of hydration (Type I ce" src="assets/sawing-window/e1c3bebb87b2326c8761e7eeaf771b88275347149cb758e64867c7accacb0789.jpg" />
+<em>Effect of curing temperature on heat of hydration (Type I cement)</em> [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]</p>
+<p>The <a href="ultrasonic-pulse-velocity.html">UPV</a> method utilizes p-waves (compression waves) rather than s-waves because they are less sensitive to sample-transducer contact issues and provide a higher signal-to-noise ratio for accurate velocity determination [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. In this method, initial set is identified as the specific moment when the sound velocity begins to increase, which coincides with hydration products starting to interact [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Taylor &amp; Wang 2015 established regression equations for saw time based on this method: for early entry, saw time = 0.99 × UPV initial set + 219 (R² = 0.90), and for conventional applications, saw time = 1.24 × UPV initial set + 273 (R² = 0.85) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Additionally, mixtures containing higher <a href="fly-ash.html">fly ash</a> dosages require calibration of predicted sawing times because the slow hydration rates associated with fly ash delay the onset of saw strength, particularly in cooler conditions [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>].</p>
+<p><img alt="(a). Early entry sawing time versus initial set from UPV mea" src="assets/sawing-window/b421f6af42446bce6e71941f6b70980b0d9620f5c087ecd4bffaee5549cd4dd0.jpg" />
+<em>(a). Early entry sawing time versus initial set from UPV measurements</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="practical-field-implementation-and-calibration">Practical Field Implementation and Calibration</h2>
+<p>Contractors can develop a site-specific correlation by:</p>
+<ol>
+<li>Using traditional approaches for the first day or two</li>
+<li>Recording UPV initial set times and actual sawing times</li>
+<li>Building a correlation curve for the specific materials</li>
+<li>Using the curve to predict sawing time for the remainder of the project [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</li>
+</ol>
+<p><img alt="(b). Conventional sawing time versus initial set from UPV me" src="assets/sawing-window/9cec4573ad826b19743ba71f2066e3cac448d6fdc14fb7631e2cea5f89f44917.jpg" />
+<em>(b). Conventional sawing time versus initial set from UPV measurements</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>Field calorimetry testing serves as a process control tool to determine the suitability of specified concrete mixes for specific weather conditions, such as hot or cold seasons, allowing for adjustments in sawing and curing procedures. [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p><img alt="Lafarge basket test setup" src="assets/sawing-window/a96e7a5444398e209ee6116666796df96b7d7a0e139e53d50f29aad70a648d2c.jpg" />
+<em>Lafarge basket test setup</em> [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p>The calorimetry test method is generally completed quicker than <a href="solution-calorimeter.html">ASTM C 186</a>, taking approximately 24 hours to finish. [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]</p>
+<p><img alt="Comparison of the set times from ASTM C 403 and calorimetry" src="assets/sawing-window/b57593ab1a0635b21fa02187c279bc0639ea6a8a6c54da0dfc7a953908c2c9c0.jpg" />
+<em>Comparison of the set times from ASTM C 403 and calorimetry tests</em> [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]</p>
+<h2 id="alternative-joint-formation-methods">Alternative Joint Formation Methods</h2>
+<p>Early entry sawing joints typically exhibit delayed cracking compared to conventional methods, with an average crack initiation time of 12.3 days versus 0.6 days for one-third depth and 2.2 days for one-quarter depth conventional cuts [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Consequently, the deformation at early entry saw joints ranges from 0.0055 to 0.0622 inches, which is significantly higher than the 0.0012–0.0410 inch range observed in one-quarter depth conventional cuts [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Alternatively, the sawing window can be bypassed entirely by using embedded metal strips or plastic assemblies that induce transverse joints during paving, eliminating the need for post-placement cutting [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>]; these joint-forming devices are typically secured with wire ties at 305 mm (1-foot) intervals to prevent rollover when concrete is placed by a slipform paver [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>].</p>
+<p><img alt="Joints with different sawing depths in the test sections" src="assets/sawing-window/2f6f77c8e217fef625b414fce547c6d14e6d831a042b472853082f55e9a4894c.jpg" />
+<em>Joints with different sawing depths in the test sections</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p>Regarding placement and installation, minimizing the head of concrete in front of the paver helps prevent issues when anchoring <a href="dowel-bar.html">dowel</a> baskets [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]. Furthermore, installation of expansion joints in an overlay can be accomplished after placement by making two full-overlay-depth saw cuts located one inch apart at a contraction joint near an existing expansion joint, then replacing the inch of concrete with expansion material [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>].</p>
+<p><img alt="– SD Route 50 Concrete Head In Front of the Paver" src="assets/sawing-window/10c59e669102d54dd3b638f3caf5d22d1ebae2ae15b8f512576320935f7f2c23.jpg" />
+<em>– SD Route 50 Concrete Head In Front of the Paver</em> [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]</p>
+<h2 id="design-parameters-for-ultrathin-overlays">Design Parameters for Ultrathin Overlays</h2>
+<p>In designs for unbonded overlays over concrete, enhancing final overlay performance is achieved by correcting irregularities in cross-slope and profile through varying the thickness of concrete rather than the depth of the asphalt bond breaker [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]. For unbonded overlays over concrete in non-arid climates, providing a positive drainage path for surface moisture to exit the interlayer bond breaker is necessary to prevent interlayer erosion under heavy traffic loadings [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>].</p>
+<p><img alt="– US 18 Unbonded Concrete Overlay Improvement" src="assets/sawing-window/64d30d264f590b241a938aff4227dec7ee3b1cb0207dc593105c01db819a3853.jpg" />
+<em>– US 18 Unbonded Concrete Overlay Improvement</em> [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]</p>
+<p>Regarding ultrathin Portland cement concrete overlays less than 3.5 inches thick, early entry sawing to a depth of T/3 or 1.5 inches is required to control cracking in the thin section [<sup><a href="#ref-10" aria-label="Reference 10">10</a></sup>]. In these ultrathin overlay applications, longitudinal and transverse contraction joints are typically spaced at 4-foot intervals in both directions [<sup><a href="#ref-10" aria-label="Reference 10">10</a></sup>]. While the maximum spacing for transverse and longitudinal joints in feet should not exceed twice the overlay depth in inches for normal concrete mixes, larger spacing can be considered when specific fibers are included [<sup><a href="#ref-10" aria-label="Reference 10">10</a></sup>].</p>
+<h2 id="sawing-depth-specifications">Sawing Depth Specifications</h2>
+<p>Sawing depth is typically specified as a fraction of slab depth (D), with field experience indicating that cuts between 1/4 D and 1/3 D provide effective cracking control in most circumstances. However, early-age sawing at depths less than 1/4 D has been observed to yield better crack control compared to the conventional 1/4 D to 1/3 D range. [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="initial-set.html">Initial Set</a></li>
+<li><a href="ultrasonic-pulse-velocity.html">Ultrasonic Pulse Velocity</a></li>
+<li><a href="concrete-pavement-joint.html">Concrete Pavement Joint</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">P. Taylor and X. Wang, &quot;Comparison of Setting Time Measured Using Ultrasonic Wave Propagation with Saw-Cutting Times on Pavements,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TR-675, 2015. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/PCC_setting_time_and_joint_sawing_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/PCC_setting_time_and_joint_sawing_w_cvr.pdf</a></li><li id="ref-2">K. Wang, J. Hu, F. Bektas, P. Taylor, and H. Ceylan, &quot;Crack Development in Ternary Mix Concrete Utilizing Various Saw Depths,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TR-587, 2009. [Online]. Available: <a href="https://publications.iowa.gov/19999/1/IADOT_tr_587_Crack_Development_Ternary_Mix_Concrete_Saw_Depths_February_2009.pdf" rel="noopener noreferrer" target="_blank">https://publications.iowa.gov/19999/1/IADOT_tr_587_Crack_Development_Ternary_Mix_Concrete_Saw_Depths_February_2009.pdf</a></li><li id="ref-3">P. Taylor and X. Wang, &quot;Concrete Pavement MDA: Comparison of Setting Time Measured Using Ultrasonic Wave Propagation With Saw-Cutting Times on Pavements in Iowa,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TPF-5(205), 2014. [Online]. Available: <a href="https://www.intrans.iastate.edu/research/completed/comparison-of-setting-time-measured-using-ultrasonic-wave-propagation-with-saw-cutting-times-on-pavements-in-iowa/" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/research/completed/comparison-of-setting-time-measured-using-ultrasonic-wave-propagation-with-saw-cutting-times-on-pavements-in-iowa/</a></li><li id="ref-4">H. Ceylan, S. Kim, Y. Zhang, S. Yang, O. Kaya, K. Gopalakrishnan, and P. Taylor, &quot;Prevention of Longitudinal Cracking in Iowa Widened Concrete Pavement,&quot; Institute for Transportation, Ames, IA, Rep. TR-700, 2018. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/07/longitudinal_cracking_prevention_in_widened_concrete_pvmt_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/07/longitudinal_cracking_prevention_in_widened_concrete_pvmt_w_cvr.pdf</a></li><li id="ref-5">G. Fick and D. Harrington, &quot;Concrete Overlay Field Application Program, Final Report: Volume I,&quot; National Concrete Pavement Technology Center, Ames, IA, 2012. [Online]. Available: <a href="https://apps.itd.idaho.gov/apps/manuals/Materials/Materials%20References/OverlayFieldAppFinalReport.pdf" rel="noopener noreferrer" target="_blank">https://apps.itd.idaho.gov/apps/manuals/Materials/Materials%20References/OverlayFieldAppFinalReport.pdf</a></li><li id="ref-6">K. Wang, Z. Ge, J. Grove, J. M. Ruiz, and R. Rasmussen, &quot;Developing a Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures (Phase 3),&quot; CTRE, Iowa State University, Ames, IA, Rep. FHWA Project 17 (Phase I), 2006. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf</a></li><li id="ref-7">K. Wang, Z. Ge, J. Grove, J. M. Ruiz, R. Rasmussen, and T. Ferragut, &quot;Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures, Phase 2,&quot; Center for Transportation Research and Education, Ames, IA, 2007. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/calorimeter.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/calorimeter.pdf</a></li><li id="ref-8">X. Wang, P. Taylor, and D. King, &quot;Evaluation of Modified Concrete Mixture Proportions for the City of West Des Moines,&quot; National Concrete Pavement Technology Center, Ames, IA, 2016. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/WDM_modified_concrete_mixture_proportions_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/WDM_modified_concrete_mixture_proportions_w_cvr.pdf</a></li><li id="ref-9">J. K. Cable, J. Williams, B. L. Shearer, S. Reinert, and R. Steffes, &quot;Evaluation of Transverse Joint Forming Methods for PCC Pavement,&quot; CTRE, Iowa State University, Ames, IA, Rep. TR-532, 2006. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/transverse_joint.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/transverse_joint.pdf</a></li><li id="ref-10">J. K. Cable and J. Williams, &quot;Evaluation of Unbonded Ultrathin Whitetopping of Brick Streets,&quot; CTRE, Iowa State University, Ames, IA, Rep. TR-466, 2006. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/whitetopping.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/whitetopping.pdf</a></li>
+</ol>
+</section></article>
+</main>
+</div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

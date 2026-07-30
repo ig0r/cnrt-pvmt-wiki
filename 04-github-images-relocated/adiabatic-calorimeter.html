@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adiabatic Calorimeter</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables: override the example no-op with a scrolling block (FR-OB-5.1) */
+table { display: block; overflow-x: auto; border-collapse: collapse; margin: 1rem 0; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+th, td { border: 1px solid var(--border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /Users/igor/dev/llm/ak-llm-wiki/llm-wiki-tools/hierarchy_v2/07-hierarchy_concepts_lint -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">271 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-materials-and-mixtures.html">Concrete Materials &amp; Mixtures</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregates.html">Aggregates</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="carbonate-aggregate.html">Carbonate Aggregate</a></li><li><a href="iowa-pore-index.html">Iowa Pore Index</a></li><li><a href="lightweight-aggregate.html">Lightweight Aggregate</a></li><li><a href="mercury-intrusion-porosimetry.html">Mercury Intrusion Porosimetry</a></li><li><a href="recycled-concrete-aggregate.html">Recycled Concrete Aggregate</a></li><li><a href="rock-typing.html">Rock Typing</a></li></ul></details></li><li><a href="cementitious-materials-and-chemistry.html">Cementitious Materials &amp; Chemistry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bassanite.html">Bassanite</a></li><li><a href="chemical-admixtures-concrete.html">Chemical Admixtures for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entraining-agent.html">Air Entraining Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="micro-air.html">Micro Air®</a></li><li><a href="vinsol-resin.html">Vinsol Resin</a></li></ul></details></li><li><a href="cement-admixture-compatibility.html">Cement-Admixture Compatibility</a></li></ul></details></li><li><a href="interfacial-transition-zone.html">Interfacial Transition Zone</a></li><li><a href="supplementary-cementitious-materials.html">Supplementary Cementitious Materials</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="blended-cement.html">Blended Cement</a></li><li><a href="fly-ash.html">Fly Ash</a></li><li><a href="ground-granulated-blast-furnace-slag.html">Ground Granulated Blast-Furnace Slag</a></li><li><a href="pozzolanic-reaction.html">Pozzolanic Reaction</a></li><li><a href="silica-fume.html">Silica Fume</a></li><li><a href="ternary-mixture.html">Ternary Mixture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="performance-based-specification-for-ternary-mixtures.html">Performance-Based Specification for Ternary Mixtures</a></li></ul></details></li></ul></details></li><li><a href="type-k-shrinkage-compensating-cement.html">Type K Shrinkage-Compensating Cement</a></li></ul></details></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-resistant-glass-fibers.html">Alkali-Resistant Glass Fibers</a></li><li><a href="hybrid-fiber-reinforced-concrete.html">Hybrid Fiber-Reinforced Concrete</a></li><li><a href="polypropylene-microfibers.html">Polypropylene Microfibers</a></li><li><a href="polyvinyl-alcohol-fibers.html">Polyvinyl Alcohol Fibers</a></li><li><a href="synthetic-fiber-reinforcement.html">Synthetic Fiber Reinforcement</a></li></ul></details></li><li><a href="fresh-concrete-workability-and-mixing.html">Fresh Concrete, Workability &amp; Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="false-set-premature-stiffening.html">False Set / Premature Stiffening</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-c-359-test.html">Modified C 359 Test</a></li></ul></details></li><li><a href="retempering.html">Retempering</a></li><li><a href="two-stage-mixing.html">Two-Stage Mixing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-shear-mixing.html">High Shear Mixing</a></li><li><a href="moisture-sensor-for-concrete.html">Moisture Sensor for Concrete</a></li><li><a href="slurry-premixing.html">Slurry Premixing</a></li><li><a href="specific-mixing-energy.html">Specific Mixing Energy</a></li></ul></details></li><li><a href="workability-of-concrete.html">Workability of Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cabrera-slump-value.html">Cabrera Slump Value</a></li><li><a href="compaction-densification-index.html">Compaction Densification Index</a></li><li><a href="excess-paste-theory.html">Excess Paste Theory</a></li><li><a href="green-strength.html">Green Strength</a></li><li><a href="gyratory-compactor-concrete.html">Gyratory Compactor (Concrete)</a></li><li><a href="vKelly-test.html">VKelly Test</a></li><li><a href="vibrating-slope-apparatus.html">Vibrating Slope Apparatus (VSA)</a></li><li><a href="workability-energy-index.html">Workability Energy Index</a></li></ul></details></li></ul></details></li><li><a href="hydration-heat-and-maturity.html">Hydration, Heat &amp; Maturity</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calorimetry.html">Calorimetry</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="adiabatic-calorimeter.html" class="active" aria-current="page">Adiabatic Calorimeter</a></li><li><a href="heat-index-method.html">Heat Index Method</a></li><li><a href="isothermal-calorimeter.html">Isothermal Calorimeter</a></li><li><a href="semi-adiabatic-calorimeter.html">Semi-adiabatic Calorimeter</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="coffee-cup-test.html">Coffee Cup Test</a></li><li><a href="dewar-test.html">Dewar Test</a></li></ul></details></li><li><a href="solution-calorimeter.html">Solution Calorimeter</a></li></ul></details></li><li><a href="cement-hydration.html">Cement Hydration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="degree-of-hydration.html">Degree of Hydration</a></li><li><a href="heat-of-hydration.html">Heat of Hydration</a></li><li><a href="heat-signature.html">Heat Signature</a></li><li><a href="initial-set.html">Initial Set</a></li><li><a href="thermogravimetric-analysis.html">Thermogravimetric Analysis</a></li></ul></details></li><li><a href="maturity-method.html">Maturity Method</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="activation-energy.html">Activation Energy</a></li><li><a href="datum-temperature.html">Datum Temperature</a></li><li><a href="maturity-testing-for-concrete-opening-strength.html">Maturity Testing for Concrete Opening Strength</a></li><li><a href="time-temperature-factor.html">Time-Temperature Factor</a></li></ul></details></li></ul></details></li><li><a href="mix-design-and-specialty-mixtures.html">Mix Design &amp; Specialty Mixtures</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="combined-aggregate-gradation.html">Combined Aggregate Gradation</a></li><li><a href="econocrete.html">Econocrete</a></li><li><a href="high-performance-concrete.html">High-Performance Concrete</a></li><li><a href="performance-based-mix-design.html">Performance-Based Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="critical-minimum-cementitious-content.html">Critical Minimum Cementitious Content</a></li><li><a href="vp-vvoid-ratio.html">Vp/Vvoid Ratio</a></li></ul></details></li><li><a href="performance-engineered-mixtures.html">Performance-Engineered Mixtures</a></li><li><a href="quality-management-concrete.html">Quality Management-Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="modified-quality-management-concrete.html">Modified Quality Management Concrete (M-QMC)</a></li></ul></details></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="semi-flowable-self-consolidating-concrete.html">Semi-Flowable Self-Consolidating Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mini-paver.html">Mini-Paver</a></li><li><a href="sfscc-mix-proportioning-method.html">SFSCC Mix Proportioning Method</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="construction-and-equipment.html">Construction &amp; Equipment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-paving-construction.html">Concrete Paving Construction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="auto-float.html">Auto-Float</a></li><li><a href="dowel-basket-ripple.html">Dowel Basket Ripple</a></li><li><a href="gps-pavement-surface-mapping.html">GPS Pavement Surface Mapping</a></li><li><a href="intelligent-construction-systems.html">Intelligent Construction Systems</a></li><li><a href="knife-joint-former.html">Knife Joint Former</a></li><li><a href="longitudinal-joint-forming-knife.html">Longitudinal Joint Forming Knife</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="stringless-paving.html">Stringless Paving</a></li><li><a href="two-lift-paving.html">Two-Lift Paving</a></li></ul></details></li><li><a href="quality-assurance-and-field-testing.html">Quality Assurance &amp; Field Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mco-suite.html">MCO Suite of Tests</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="mobile-concrete-research-lab.html">Mobile Concrete Research Lab</a></li></ul></details></li><li><a href="nuclear-gauge.html">Nuclear Gauge</a></li><li><a href="portable-x-ray-fluorescence.html">Portable X-Ray Fluorescence (XRF)</a></li><li><a href="thickness-index.html">Thickness Index</a></li></ul></details></li></ul></details></li><li><a href="durability-and-materials-related-distress.html">Durability &amp; Materials-Related Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analysis.html">Air-Void Analysis</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-void-analyzer.html">Air Void Analyzer</a></li><li><a href="rapidair-test.html">RapidAir Test</a></li><li><a href="super-air-meter.html">Super Air Meter</a></li></ul></details></li><li><a href="freeze-thaw-durability.html">Freeze-Thaw Durability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="astm-c672-scaling-test.html">ASTM C672 — Standard Test Method for Scaling Resistance of Concrete Surfaces Exposed to Deicing Chemicals</a></li><li><a href="bnq-scaling-test.html">BNQ NQ 2621-900 — Quebec Scaling Test Method</a></li><li><a href="degree-of-saturation.html">Degree of Saturation</a></li><li><a href="deicing-salt-effects.html">Deicing Salt Effects</a></li><li><a href="one-dimensional-freezing.html">One-Dimensional Freezing</a></li></ul></details></li><li><a href="materials-related-distress.html">Materials-Related Distress (MRD)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alkali-silica-reaction.html">Alkali-Silica Reaction</a></li><li><a href="d-cracking.html">D-Cracking</a></li><li><a href="ettringite-fill.html">Ettringite Fill</a></li><li><a href="premature-joint-deterioration.html">Premature Joint Deterioration</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="calcium-oxychloride-formation.html">Calcium Oxychloride Formation</a></li><li><a href="joint-deterioration-prevention.html">Joint Deterioration Prevention</a></li><li><a href="low-temperature-differential-scanning-calorimetry.html">Low-Temperature Differential Scanning Calorimetry (LT-DSC)</a></li><li><a href="paste-expansion-test.html">Paste Expansion Test</a></li></ul></details></li><li><a href="sulfate-attack.html">Sulfate Attack</a></li></ul></details></li><li><a href="transport-properties-and-permeability.html">Transport Properties &amp; Permeability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-permeability-test.html">Air Permeability Test</a></li><li><a href="drop-test.html">Drop Test</a></li><li><a href="low-permeability-concrete.html">Low-Permeability Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="electrical-conductivity-concrete.html">Electrical Conductivity of Concrete</a></li><li><a href="sorptivity.html">Sorptivity</a></li><li><a href="surface-resistivity.html">Surface Resistivity</a></li><li><a href="wenner-probe-surface-resistivity.html">Wenner Probe / Surface Resistivity</a></li></ul></details></li><li><a href="penetrating-sealers.html">Penetrating Sealers</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="contact-angle-measurement.html">Contact Angle Measurement</a></li></ul></details></li><li><a href="rapid-chloride-migration.html">Rapid Chloride Migration</a></li></ul></details></li></ul></details></li><li><a href="early-age-behavior-curing-and-distress.html">Early-Age Behavior, Curing &amp; Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-curing.html">Concrete Curing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curing-compounds.html">Curing Compounds</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="efficiency-index.html">Efficiency Index</a></li></ul></details></li><li><a href="internal-curing.html">Internal Curing</a></li><li><a href="vdot-accelerated-curing.html">VDOT Accelerated Curing Regime</a></li></ul></details></li><li><a href="curling-and-warping.html">Curling and Warping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curvature-iri.html">Curvature IRI</a></li><li><a href="deflection-ratio.html">Deflection Ratio</a></li><li><a href="degree-of-curvature-curling.html">Degree of Curvature</a></li><li><a href="equivalent-temperature-difference.html">Equivalent Temperature Difference</a></li><li><a href="pavement-curling.html">Pavement Curling</a></li><li><a href="pavement-warping.html">Pavement Warping</a></li><li><a href="pseudo-strain-gradient.html">Pseudo Strain Gradient (PSG)</a></li><li><a href="second-generation-curvature-index.html">Second-Generation Curvature Index (2GCI)</a></li></ul></details></li><li><a href="shrinkage-and-early-age-cracking.html">Shrinkage &amp; Early-Age Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="capillary-pressure-in-concrete.html">Capillary Pressure in Concrete</a></li><li><a href="coefficient-of-thermal-expansion-concrete.html">Coefficient of Thermal Expansion (Concrete)</a></li><li><a href="drying-shrinkage.html">Drying Shrinkage</a></li><li><a href="plastic-shrinkage-cracking.html">Plastic Shrinkage Cracking</a></li><li><a href="restrained-shrinkage-ring-test.html">Restrained Shrinkage Ring Test</a></li></ul></details></li></ul></details></li><li><a href="nondestructive-testing-and-evaluation.html">Condition Evaluation &amp; Nondestructive Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection-testing.html">Deflection Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="continuous-deflection-testing.html">Continuous Deflection Testing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="high-speed-rigid-pavement-analyzer.html">High Speed Rigid Pavement Analyzer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="photogrammetry-pavement.html">Photogrammetry for Pavement Measurement</a></li><li><a href="position-coincident-measurement.html">Position-Coincident Measurement</a></li><li><a href="time-coincident-measurement.html">Time-Coincident Measurement</a></li></ul></details></li><li><a href="rolling-dynamic-deflectometer.html">Rolling Dynamic Deflectometer</a></li><li><a href="rolling-weight-deflectometer.html">Rolling Weight Deflectometer</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="backcalculation.html">Backcalculation</a></li></ul></details></li></ul></details></li><li><a href="electromagnetic-and-thermal-methods.html">Electromagnetic &amp; Thermal Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="eddy-current-testing-pavements.html">Eddy Current Testing for Pavements</a></li><li><a href="ground-penetrating-radar.html">Ground Penetrating Radar (GPR)</a></li><li><a href="infrared-thermography.html">Infrared Thermography</a></li></ul></details></li><li><a href="stress-wave-and-sonic-methods.html">Stress-Wave &amp; Sonic Methods</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-coupled-surface-wave.html">Air-Coupled Surface Wave Sensing</a></li><li><a href="impact-echo.html">Impact-Echo</a></li><li><a href="mira-ultrasonic-testing.html">MIRA Ultrasonic Testing</a></li><li><a href="spectral-analysis-of-surface-waves.html">Spectral Analysis of Surface Waves (SASW)</a></li><li><a href="ultrasonic-pulse-velocity.html">Ultrasonic Pulse Velocity</a></li></ul></details></li><li><a href="surface-strength-and-condition.html">Surface Strength &amp; Condition</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-index.html">Pavement Condition Index</a></li><li><a href="schmidt-hammer.html">Schmidt Hammer</a></li></ul></details></li><li><a href="thickness-and-surface-imaging.html">Thickness &amp; Surface Imaging</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="scanning-laser-thickness-measurement.html">Scanning Laser Thickness Measurement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="point-cloud-processing-pavement.html">Point Cloud Processing for Pavement</a></li><li><a href="virtual-core.html">Virtual Core</a></li></ul></details></li></ul></details></li></ul></details></li><li><a href="preservation-and-rehabilitation.html">Preservation &amp; Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bcoa-concrete-overlay.html">Bonded Concrete Overlay on Asphalt (BCOA)</a></li><li><a href="bcoc-concrete-overlay.html">Bonded Concrete Overlay on Concrete (BCOC)</a></li><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="geotextile-bond-breaker.html">Geotextile Bond Breaker</a></li><li><a href="iowa-direct-shear-method.html">Iowa Direct Shear Method</a></li><li><a href="thin-whitetopping.html">Thin Whitetopping</a></li><li><a href="ubcoa-concrete-overlay.html">Unbonded Concrete Overlay on Asphalt (UBCOA)</a></li><li><a href="ubcoc-concrete-overlay.html">Unbonded Concrete Overlay on Concrete (UBCOC)</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="repair-and-recycling.html">Repair &amp; Recycling</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li><li><a href="structural-design-and-analysis.html">Structural Design &amp; Analysis</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joints-dowels-and-load-transfer.html">Joints, Dowels &amp; Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-pavement-joint.html">Concrete Pavement Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="demec-points.html">DEMEC Points</a></li><li><a href="dowel-bar.html">Dowel Bar</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-t253-test.html">AASHTO T253 Test Procedure</a></li><li><a href="dowel-bearing-stress.html">Dowel Bearing Stress</a></li><li><a href="dowel-oblonging.html">Dowel Oblonging</a></li><li><a href="elliptical-dowel.html">Elliptical Dowel</a></li><li><a href="fiber-reinforced-polymer-dowels.html">Fiber-Reinforced Polymer Dowels</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="accelerated-aging-frp.html">Accelerated Aging (FRP)</a></li></ul></details></li><li><a href="friberg-dowel-equations.html">Friberg Dowel Equations</a></li><li><a href="iosipescu-shear-test.html">Iosipescu Shear Test</a></li><li><a href="modulus-of-dowel-support.html">Modulus of Dowel Support</a></li></ul></details></li><li><a href="early-entry-sawing.html">Early Entry Sawing</a></li><li><a href="joint-activation.html">Joint Activation</a></li><li><a href="joint-faulting.html">Joint Faulting</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="faultmeter.html">Faultmeter</a></li></ul></details></li><li><a href="joint-opening.html">Joint Opening</a></li><li><a href="jri-plus-joint.html">JRI+ Joint</a></li><li><a href="load-transfer-efficiency.html">Load Transfer Efficiency</a></li><li><a href="sawing-window.html">Sawing Window</a></li></ul></details></li></ul></details></li><li><a href="pavement-analysis-software.html">Pavement Analysis Software</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diplomat.html">DIPLOMAT</a></li><li><a href="everfe.html">EverFE</a></li><li><a href="hiperpav.html">HIPERPAV</a></li><li><a href="illi-pave.html">ILLI-PAVE</a></li><li><a href="islab2000.html">ISLAB2000</a></li><li><a href="mechanistic-empirical-pavement-design-guide.html">Mechanistic-Empirical Pavement Design Guide</a></li></ul></details></li><li><a href="pavement-foundation-and-support.html">Pavement Foundation &amp; Support</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cement-treated-base.html">Cement Treated Base</a></li><li><a href="coefficient-of-drainage.html">Coefficient of Drainage</a></li><li><a href="core-hole-permeameter.html">Core Hole Permeameter</a></li><li><a href="dynamic-cone-penetrometer.html">Dynamic Cone Penetrometer</a></li><li><a href="geotextile-separator.html">Geotextile Separator</a></li><li><a href="loss-of-support.html">Loss of Support</a></li><li><a href="modulus-of-subgrade-reaction.html">Modulus of Subgrade Reaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-modulus-of-subgrade-reaction.html">Composite Modulus of Subgrade Reaction</a></li><li><a href="effective-composite-modulus-of-subgrade-reaction.html">Effective Composite Modulus of Subgrade Reaction</a></li></ul></details></li><li><a href="ring-infiltrometer.html">Ring Infiltrometer</a></li></ul></details></li><li><a href="slab-design-and-geometry.html">Slab Design &amp; Geometry</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-spacing-effects-on-performance.html">Joint Spacing Effects on Performance</a></li><li><a href="ll-ratio.html">L/ℓ Ratio</a></li><li><a href="longitudinal-cracking.html">Longitudinal Cracking</a></li><li><a href="transverse-cracking.html">Transverse Cracking</a></li><li><a href="widened-concrete-slab.html">Widened Concrete Slab</a></li><li><a href="zero-maintenance-jointed-plain-concrete-pavement.html">Zero-Maintenance Jointed Plain Concrete Pavement</a></li></ul></details></li></ul></details></li><li><a href="surface-characteristics.html">Surface Characteristics</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-friction.html">Pavement Friction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="international-friction-index.html">International Friction Index (IFI)</a></li></ul></details></li><li><a href="pavement-noise.html">Pavement Noise</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="noise-zones.html">Noise Zones</a></li></ul></details></li><li><a href="pavement-smoothness.html">Pavement Smoothness</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dipstick-profiler.html">Dipstick Profiler</a></li><li><a href="gomaco-smoothness-indicator.html">GOMACO Smoothness Indicator (GSI)</a></li><li><a href="inclinometer-profiling.html">Inclinometer Profiling</a></li><li><a href="international-roughness-index.html">International Roughness Index (IRI)</a></li><li><a href="pavement-profile-scanner.html">Pavement Profile Scanner (PPS)</a></li><li><a href="profilograph.html">Profilograph</a></li><li><a href="real-time-profiler-rtp.html">Real Time Profiler (RTP)</a></li><li><a href="surpro-2000-profiler.html">SurPRO 2000 Profiler</a></li></ul></details></li><li><a href="pavement-texture.html">Pavement Texture</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="exposed-aggregate-surface.html">Exposed Aggregate Surface</a></li></ul></details></li></ul></details></li><li><a href="sustainability-and-emerging-technologies.html">Sustainability &amp; Emerging Technologies</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="additive-manufacturing-concrete.html">Additive Manufacturing for Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3d-concrete-printing.html">3D Concrete Printing</a></li><li><a href="3d-structured-light-scanning-system.html">3D Structured Light Scanning System</a></li><li><a href="key-properties-3d-printing-concrete.html">Key Properties of 3D Printing Concrete</a></li></ul></details></li><li><a href="concrete-pavement-sustainability.html">Concrete Pavement Sustainability</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="life-cycle-cost-analysis.html">Life-Cycle Cost Analysis</a></li><li><a href="lifecycle-cost-analysis.html">Lifecycle Cost Analysis</a></li></ul></details></li><li><a href="pervious-concrete.html">Pervious Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pervious-concrete-pavement.html">Pervious Concrete Pavement</a></li></ul></details></li><li><a href="photocatalytic-concrete-pavement.html">Photocatalytic Concrete Pavement</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="concrete-pavement-engineering.html">Concrete Pavement Engineering</a><span class="crumb-sep">›</span><a href="concrete-materials-and-mixtures.html">Concrete Materials &amp; Mixtures</a><span class="crumb-sep">›</span><a href="hydration-heat-and-maturity.html">Hydration, Heat &amp; Maturity</a><span class="crumb-sep">›</span><a href="calorimetry.html">Calorimetry</a><span class="crumb-sep">›</span><span class="crumb-current">Adiabatic Calorimeter</span></nav>
+<article><h1>Adiabatic Calorimeter</h1>
+<div class="meta"><div class="part-of">Part of: <a href="calorimetry.html">Calorimetry</a></div><div><a class="tag" href="index.html?q=calorimetry">calorimetry</a><a class="tag" href="index.html?q=hydration">hydration</a><a class="tag" href="index.html?q=testing">testing</a></div><div>Also known as: <a href="index.html?q=adiabatic%20calorimetry">adiabatic calorimetry</a></div><div>Created 2026-05-20 00:00:00+00:00 · Updated 2026-07-30 00:04:50+00:00</div></div>
+<p>A <a href="calorimetry.html">Calorimetry</a> device that measures <a href="heat-of-hydration.html">Heat of Hydration</a> under near-zero heat loss conditions (temperature loss &lt;0.02 K/h). Heat loss is prevented by controlling the temperature of the surrounding environment using water, air, or heated containers. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#overview-and-core-characteristics">Overview and Core Characteristics</a></li><li><a href="#semi-adiabatic-calorimeter-performance">Semi-Adiabatic Calorimeter Performance</a></li><li><a href="#standardization-and-testing-protocols">Standardization and Testing Protocols</a></li><li><a href="#impact-of-mix-components-and-admixtures">Impact of Mix Components and Admixtures</a></li><li><a href="#fly-ash-hydration-detection">Fly Ash Hydration Detection</a></li><li><a href="#field-applications-and-measurement-techniques">Field Applications and Measurement Techniques</a></li><li><a href="#limitations-and-challenges">Limitations and Challenges</a></li><li><a href="#mitigation-strategies">Mitigation Strategies</a></li><li><a href="#temperature-profiles-in-ternary-mixes">Temperature Profiles in Ternary Mixes</a></li><li><a href="#related">Related</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (10)</summary><div class="sources-body"><a href="#ref-5">Evaluating Properties of Blended Cements for Concrete Pavements (2003)</a>, <a href="#ref-4">Long-Term Plan for Concrete Pavement Research and Technology—The Concrete Pavement Road Map (Second Generation): Volume II, Tracks (FHWA-HRT-11-070) (2012)</a>, <a href="#ref-1">Developing a Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures (Phase 3) (2006)</a>, <a href="#ref-2">Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures, Phase 2 (2007)</a>, <a href="#ref-6">Simple and Rapid Test for Monitoring the Heat Evolution ..., Phase III (2008)</a>, <a href="#ref-3">Development of Performance Properties of Ternary Mixtures: Field Demonstrations and Project Summary (2012)</a>, <a href="#ref-9">Concrete Pavement MDA: Comparison of Setting Time Measured Using Ultrasonic Wave Propagation With Saw-Cutting Times on Pavements in Iowa (2014)</a>, <a href="#ref-8">Comparison of Setting Time Measured Using Ultrasonic Wave Propagation with Saw-Cutting Times on Pavements (2015)</a>, <a href="#ref-10">Evaluation and Testing of a Lightweight Fine Aggregate Concrete Bridge Deck in Buchanan County, Iowa (2016)</a>, <a href="#ref-7">Performance Evaluation of Very Early Strength Latex-Modified Concrete (LMC-VE) Overlay (TR-771) (2024)</a></div></details>
+
+<h2 id="overview-and-core-characteristics">Overview and Core Characteristics</h2>
+<ul>
+<li>Adiabatic curves are the most suitable starting points for temperature calculation in hardening structures</li>
+</ul>
+<h2 id="semi-adiabatic-calorimeter-performance">Semi-Adiabatic Calorimeter Performance</h2>
+<p>Semi-adiabatic calorimeters permit a maximum heat loss of less than 100 J/(h⋅K) and typically yield mean temperature rises that are 2–3% lower than adiabatic test results [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These devices can predict adiabatic temperature rise by measuring and accounting for the specific heat loss during testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A specific example is the AdiaCal <a href="semi-adiabatic-calorimeter.html">semi-adiabatic calorimeter</a>, which is used to measure the heat of hydration in concrete with test results typically recorded from initial setup until peak temperature is reached; for instance, tests have shown peak temperatures reaching approximately 105°F at 14.6 hours or up to 115°F depending on the mix and conditions [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Such methods are most convenient for producing continuous heat of hydration curves under conditions close to mass curing and can determine heat evolution of an actual concrete mixture.</p>
+<p><img alt="AdiaCal calorimetry test equipment for heat of hydration of" src="assets/adiabatic-calorimeter/a3b79c94ccb876c7f3a5999b9084877ae304f219f5b36be8892687deb5080270.jpg" />
+<em>AdiaCal calorimetry test equipment for heat of hydration of concrete</em> [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]</p>
+<p><img alt="Heat of hydration with specific surface varied (adapted from" src="assets/adiabatic-calorimeter/db330fda4f9b8e4fc1f66bb4bdfd5ca945af4f7a0984f2de97f23a5e641bc3ee.jpg" />
+<em>Heat of hydration with specific surface varied (adapted from Lerch et al. 1946)</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="standardization-and-testing-protocols">Standardization and Testing Protocols</h2>
+<p>The development of nonproprietary test standards for adiabatic calorimetry aims to create procedures suitable for AASHTO adoption that are practical, cost-effective, and sensitive enough to characterize concrete mixtures [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>]. Adiabatic calorimetry is standardized under ASTM C 1679, which governs the testing procedures for heat of hydration in concrete mixtures [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>], and the RILEM Round-Robin test program found that specimen size and curing temperature do not significantly affect the adiabatic temperature rise results [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]; specifically, the RILEM Round-Robin showed 50% of adiabatic temperature rise variations within a narrow 2K range.</p>
+<p><img alt="Temperature increase of mass concrete under adiabatic condit" src="assets/adiabatic-calorimeter/0160a9e79fb29e1627f275880e792e756a4c2d95e3f418b6c08f933507ede185.jpg" />
+<em>Temperature increase of mass concrete under adiabatic conditions (adapted from Mindess and Young 1981)</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="impact-of-mix-components-and-admixtures">Impact of Mix Components and Admixtures</h2>
+<p><a href="adiabatic-calorimeter.html">Adiabatic calorimetry</a> can detect <a href="cement-admixture-compatibility.html">cement-admixture compatibility</a> issues by monitoring heat evolution over time [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>], and <a href="semi-adiabatic-calorimeter.html">semi-adiabatic calorimetry</a> serves as an effective method for assessing potential incompatibilities between concrete mixture ingredients, allowing for regular material testing to flag changes in composition or behavior before batch plant operations [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Through these methods, it is observed that the addition of <a href="fly-ash.html">fly ash</a> to concrete delays the peak rate of adiabatic temperature rise by approximately 1.5 hours compared to plain cement mixes, whereas slag replacement does not extend the dormant period and may slightly accelerate <a href="initial-set.html">initial set</a> time [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>]. Furthermore, adiabatic calorimetry reveals that supplementary cementitious materials like slag can decrease maximum concrete temperatures without postponing the hydration dormant period, unlike fly ash which extends this phase [<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup>].</p>
+<p><img alt="Total heat of blended cement with slag at different temperat" src="assets/adiabatic-calorimeter/74a719d54b993d6e6116de2cee1051f69a39c1457305acdefad851182a9134d6.jpg" />
+<em>Total heat of blended cement with slag at different temperatures (adapted from Ma et al. 1994)</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The behavior of various admixtures also significantly influences thermal properties; for instance, <span class="missing" title="No page for “superplasticizers”">superplasticizers</span> mildly retard concrete setting, which reduces early-age adiabatic temperature generation without affecting total heat output [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Conversely, <span class="missing" title="No page for “accelerating admixtures”">accelerating admixtures</span> increase the rate of heat evolution during the setting stage and may also increase heat liberation during the hardening stage depending on their chemical composition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Finally, <span class="missing" title="No page for “retarders”">retarders</span> reduce the early-age heat of hydration and temperature rise, with values typically equalizing to non-retarded mixes after 3-7 days [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><img alt="Effect of superplasticizer on cement hydration (adapted from" src="assets/adiabatic-calorimeter/976b172b5dc8672917130c34ec980ec0685508a4c8f63d92b9e24b2942cea2a8.jpg" />
+<em>Effect of superplasticizer on cement hydration (adapted from Jolicoeur et al. 1998)</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="fly-ash-hydration-detection">Fly Ash Hydration Detection</h2>
+<p>While simple <a href="isothermal-calorimeter.html">isothermal calorimetry</a> tests can clearly identify a second heat evolution peak associated with fly ash hydration in concrete mixes—a feature that is generally not observed when using AdiaCal or IQ Drum semi-adiabatic calorimeters [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]—other materials exhibit different thermal behaviors. In rapid-set calcium sulfoaluminate (CSA) cement, calorimetry reveals a sharp heat generation peak without a dormant period between hours 5 and 10, indicating extremely fast initial hydration that can lead to thermal cracking if not managed [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>].</p>
+<p><img alt="Isothermal calorimetry results for US 71 (Atlantic, IA) fiel" src="assets/adiabatic-calorimeter/32ee14f67f20637e0ef757b1c6fb4c64c0bea81fc8431e852255333ab3d1bff6.jpg" />
+<em>Isothermal calorimetry results for US 71 (Atlantic, IA) field concrete samples</em> [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p>The addition of citric acid to rapid-set cement extends the dormant period and shifts the peak rate of heat evolution later, whereas latex admixtures do not significantly alter the heat signature or cumulative heat output [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]. Specifically, during the 5-to-10-hour window after mixing, pastes containing citric acid exhibit a rapid increase in cumulative heat from approximately 25 J/g to 180 J/g, which is roughly double the rate observed in conventional pavement cement pastes [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>].</p>
+<p><img alt="Rate of heat generation" src="assets/adiabatic-calorimeter/e1ab7933e4d7469097cf40648c0122aa662065b5fca3283bd703d133dd4c3a5e.jpg" />
+<em>Rate of heat generation</em> [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]</p>
+<p>Various types of calorimetry are employed depending on the specific testing requirements, such as the <a href="adiabatic-calorimeter.html">Adiabatic Calorimeter</a>, which provides a near-zero heat loss environment (&lt;0.02 K/h) and is best for mass concrete simulation; in these applications, adiabatic calorimetry implicitly measures curing temperature effects on hydration rates, requiring <a href="activation-energy.html">activation energy</a> calculations to convert results to isothermal reference temperatures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><img alt="Semi-adiabatic calorimeter–IQ drum (www.quadreliservice.com)" src="assets/adiabatic-calorimeter/b549d5c89af8e90ed5b34227dd1379136d8c9bac1c7a461e1775e43fd95ad531.jpg" />
+<em>Semi-adiabatic calorimeter–IQ drum (www.quadreliservice.com)</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="field-applications-and-measurement-techniques">Field Applications and Measurement Techniques</h2>
+<p>In field calorimetry applications, mortar samples sieved from concrete are recommended over raw concrete samples because they exhibit significantly less variation during simple isothermal testing [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]. When using semi-adiabatic test data to predict pavement temperatures via models like <a href="hiperpav.html">HIPERPAV</a> II, higher accuracy is achieved compared to using isothermal test parameters because the increased temperature conditions better mimic in-situ pavements and the tests are performed on concrete rather than mortar [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]. The commercial semi-adiabatic device used in field testing is designed to measure the heat of hydration directly at construction sites, often positioned next to the pavement during paving [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>]. Calorimetric data collection in field settings can be conducted using commercial semi-adiabatic devices alongside <a href="ultrasonic-pulse-velocity.html">UPV</a> measurements to correlate heat evolution with set times [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>], and calorimetry results from both laboratory and field samples can be directly compared to evaluate the consistency of heat evolution data across different testing environments [<sup><a href="#ref-10" aria-label="Reference 10">10</a></sup>].</p>
+<p><img alt="Predicted pavement temperatures versus measurements (pavemen" src="assets/adiabatic-calorimeter/5e7df5c137ba2f19cf4c41add7d50fcf77e480e56d72e18d4bd7f2135f06abd5.jpg" />
+<em>Predicted pavement temperatures versus measurements (pavement top, Alma Center, WI )</em> [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<p>The area underneath the <a href="heat-of-hydration.html">heat signature curve</a> generated by semi-adiabatic calorimeters is used to indicate one-day strength gain in cementitious materials [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]. Furthermore, the thermal profile generated by calorimetry can be utilized to assess the setting times of mixtures through &ldquo;thermal setting times,&rdquo; which are calculated using specific fractions (such as 20% and 50%) of the temperature rise curve [<sup><a href="#ref-8" aria-label="Reference 8">8</a></sup>]. Complementary to this, <a href="ultrasonic-pulse-velocity.html">Ultrasonic pulse velocity</a> (UPV) measurements using p-wave propagation can determine initial set times in fresh concrete by monitoring sound impulse travel through a sample maintained at ambient slab temperatures [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>]. Commercial UPV devices utilize transducers placed at the bottom of a mold and on a floating polyethylene disk at the surface to record sound impulse travel times every minute [<sup><a href="#ref-9" aria-label="Reference 9">9</a></sup>].</p>
+<h2 id="limitations-and-challenges">Limitations and Challenges</h2>
+<p>Isothermal calorimeters are limited to a seven-day duration due to signal sensitivity constraints that make it difficult to distinguish hydration signals from background noise [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Furthermore, conventional test takes up to a week, utilizes expensive and complex equipment, is not suitable for routine field application, and produces results affected by assumptions of thermal properties of materials.</p>
+<p>Semi-adiabatic calorimeters such as the AdiaCal device are highly sensitive to concrete placement temperature, causing significant variation in temperature curves even for samples tested on the same day [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]. This sensitivity makes them suitable for predicting set time but less desirable for precise quality control compared to other methods [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]. Neither standard isothermal nor AdiaCal semi-adiabatic calorimeters effectively identify changes in the water-to-cement (w/c) ratio of field concrete, necessitating supplementary methods like microwave testing for such identification [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>].</p>
+<p><img alt="AdiaCal calorimeter" src="assets/adiabatic-calorimeter/9ed7ce11e56982fc7456c2384c4b802e92b050ea26ef1b53b9b4f7eee6f6672c.jpg" />
+<em>AdiaCal calorimeter</em> [<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup>]</p>
+<h2 id="mitigation-strategies">Mitigation Strategies</h2>
+<p>Water insulation is the most popular method for preventing heat loss by controlling the surrounding environment&rsquo;s temperature [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. To mitigate thermal cracking in overlays with high early-age heat generation, calorimetry data supports adjusting mix proportions to reduce rapid hydration or implementing cooling measures such as pre-cooled <a href="aggregates.html">aggregates</a> and chilled mixing water [<sup><a href="#ref-7" aria-label="Reference 7">7</a></sup>]. Consequently, research initiatives have identified a need to develop a field-ready version of the <a href="adiabatic-calorimeter.html">adiabatic calorimeter</a> that is rugged, inexpensive, and capable of reproducing laboratory data for routine quality control [<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup>].</p>
+<p><img alt="Lafarge basket test setup" src="assets/adiabatic-calorimeter/a96e7a5444398e209ee6116666796df96b7d7a0e139e53d50f29aad70a648d2c.jpg" />
+<em>Lafarge basket test setup</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<h2 id="temperature-profiles-in-ternary-mixes">Temperature Profiles in Ternary Mixes</h2>
+<p>AdiaCal calorimetry tests for ternary mixtures can record peak temperatures reaching approximately 105°F to 115°F within roughly 14.6 hours, depending on specific mixture proportions and initial ambient conditions [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>].</p>
+<p><img alt="Calorimetry test results" src="assets/adiabatic-calorimeter/87d4450946122d3ee3c6c7b933aaaeb4ba46f5c5e7261d2454607e0ba68ba96a.jpg" />
+<em>Calorimetry test results</em> [<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup>]</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="calorimetry.html">Calorimetry</a></li>
+<li><a href="semi-adiabatic-calorimeter.html">Semi-adiabatic Calorimeter</a></li>
+<li><a href="isothermal-calorimeter.html">Isothermal Calorimeter</a></li>
+<li><a href="heat-of-hydration.html">Heat of Hydration</a></li>
+</ul>
+<p>Solution calorimetry requires dissolving hydrated and unhydrated cement samples in acid mixtures to determine heat of hydration by comparing solution heat values. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">K. Wang, Z. Ge, J. Grove, J. M. Ruiz, and R. Rasmussen, &quot;Developing a Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures (Phase 3),&quot; CTRE, Iowa State University, Ames, IA, Rep. FHWA Project 17 (Phase I), 2006. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf</a></li><li id="ref-2">K. Wang, Z. Ge, J. Grove, J. M. Ruiz, R. Rasmussen, and T. Ferragut, &quot;Simple and Rapid Test for Monitoring the Heat Evolution of Concrete Mixtures, Phase 2,&quot; Center for Transportation Research and Education, Ames, IA, 2007. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/calorimeter.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/calorimeter.pdf</a></li><li id="ref-3">P. Taylor, P. Tikalsky, K. Wang, G. Fick, and X. Wang, &quot;Development of Performance Properties of Ternary Mixtures: Field Demonstrations and Project Summary,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TPF-5(117), 2012. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/ternary_final_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/ternary_final_w_cvr.pdf</a></li><li id="ref-4">D. Harrington, R. Rasmussen, D. Merritt, T. Cackler, and P. Taylor, &quot;Long-Term Plan for Concrete Pavement Research and Technology—The Concrete Pavement Road Map (Second Generation): Volume II, Tracks (FHWA-HRT-11-070),&quot; National Center for Concrete Pavement Technology, Iowa State University, Ames, IA, 2012. [Online]. Available: <a href="https://www.fhwa.dot.gov/publications/research/infrastructure/pavements/pccp/11070/11070.pdf" rel="noopener noreferrer" target="_blank">https://www.fhwa.dot.gov/publications/research/infrastructure/pavements/pccp/11070/11070.pdf</a></li><li id="ref-5">K. Wang and Z. Ge, &quot;Evaluating Properties of Blended Cements for Concrete Pavements,&quot; Department of Civil, Construction and Environmental Engineering, Iowa State University, Ames, IA, 2003. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/blended_cements-1.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/blended_cements-1.pdf</a></li><li id="ref-6">K. Wang, J. M. Ruiz, J. Hu, Z. Ge, Q. Xu, J. Grove, and R. Rasmussen, &quot;Simple and Rapid Test for Monitoring the Heat Evolution ..., Phase III,&quot; National Concrete Pavement Technology Center, Ames, IA, 2008. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/CalorimeterReportPhaseIII.pdf</a></li><li id="ref-7">K. Wang, B. M. Shankaramurthy, A. Anand, Y. Sargam, K. Freeseman, and B. Phares, &quot;Performance Evaluation of Very Early Strength Latex-Modified Concrete (LMC-VE) Overlay,&quot; Institute for Transportation, Iowa State University, Ames, IA, Rep. TR-771, 2024. [Online]. Available: <a href="https://bec.iastate.edu/wp-content/uploads/2024/10/performance_evaluation_of_LMC-VE_overlay_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://bec.iastate.edu/wp-content/uploads/2024/10/performance_evaluation_of_LMC-VE_overlay_w_cvr.pdf</a></li><li id="ref-8">P. Taylor and X. Wang, &quot;Comparison of Setting Time Measured Using Ultrasonic Wave Propagation with Saw-Cutting Times on Pavements,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TR-675, 2015. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/PCC_setting_time_and_joint_sawing_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/PCC_setting_time_and_joint_sawing_w_cvr.pdf</a></li><li id="ref-9">P. Taylor and X. Wang, &quot;Concrete Pavement MDA: Comparison of Setting Time Measured Using Ultrasonic Wave Propagation With Saw-Cutting Times on Pavements in Iowa,&quot; National Concrete Pavement Technology Center, Ames, IA, Rep. TPF-5(205), 2014. [Online]. Available: <a href="https://www.intrans.iastate.edu/research/completed/comparison-of-setting-time-measured-using-ultrasonic-wave-propagation-with-saw-cutting-times-on-pavements-in-iowa/" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/research/completed/comparison-of-setting-time-measured-using-ultrasonic-wave-propagation-with-saw-cutting-times-on-pavements-in-iowa/</a></li><li id="ref-10">P. Taylor, T. Hosteng, X. Wang, and B. Phares, &quot;Evaluation and Testing of a Lightweight Fine Aggregate Concrete Bridge Deck in Buchanan County, Iowa,&quot; National Concrete Pavement Technology Center and Bridge Engineering Center, Ames, IA, Rep. TR-648, 2016. [Online]. Available: <a href="https://www.intrans.iastate.edu/wp-content/uploads/2018/03/Buchanan_LWFA_bridge_deck_w_cvr.pdf" rel="noopener noreferrer" target="_blank">https://www.intrans.iastate.edu/wp-content/uploads/2018/03/Buchanan_LWFA_bridge_deck_w_cvr.pdf</a></li>
+</ol>
+</section></article>
+</main>
+</div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
