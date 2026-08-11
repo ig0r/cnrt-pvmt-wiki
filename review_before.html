@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concept Graph — Review (BEFORE re-parenting)</title>
+<style>
+  :root {
+    --bg:#ffffff; --fg:#1c1c1c; --muted:#5b6472; --border:#e4e0da; --chip:#f1ede6; --code:#f4f4f0;
+    --accent:#7a4a63; --link:#2456c7; --ok:#2f7d32; --warn:#b26a00; --bad:#b3261e;
+    --bar:#23222a; --bar-ink:#eae7e2; --bar-sub:#9d97a8; --bar-active:#c98fa8;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+    font-family:"Helvetica Neue",Arial,sans-serif; font-size:14px; }
+  header { background:var(--bar); color:var(--bar-ink); padding:16px 22px; }
+  header h1 { margin:0 0 4px; font-size:1.2rem; }
+  header .sub { color:var(--bar-sub); font-size:.82rem; }
+  header .eyebrow { text-transform:uppercase; letter-spacing:.08em; font-size:.68rem;
+    color:var(--bar-active); font-weight:700; margin-bottom:6px; }
+  .toolbar { position:sticky; top:0; z-index:5; background:var(--bg);
+    border-bottom:1px solid var(--border); padding:10px 22px; display:flex; flex-wrap:wrap;
+    gap:8px 14px; align-items:center; }
+  .toolbar label { color:var(--muted); font-size:.82rem; }
+  select, input[type=text] { font:inherit; padding:4px 6px; border:1px solid var(--border);
+    border-radius:5px; background:#fff; color:var(--fg); }
+  input[type=text] { min-width:180px; }
+  button { font:inherit; padding:4px 9px; border:1px solid var(--border); border-radius:5px;
+    background:#fff; color:var(--fg); cursor:pointer; }
+  button:hover { border-color:var(--muted); }
+  .spacer { flex:1; }
+  .counts { color:var(--muted); font-size:.8rem; }
+  .counts b { color:var(--fg); }
+  .wrap { overflow:auto; padding:0 22px 60px; }
+  table { border-collapse:collapse; width:100%; margin-top:12px; font-size:.82rem; }
+  thead th { position:sticky; top:0; background:var(--chip); border:1px solid var(--border);
+    padding:6px 8px; text-align:left; white-space:nowrap; z-index:1; }
+  td { border:1px solid var(--border); padding:6px 8px; vertical-align:top; }
+  tr.approve { background:rgba(47,125,50,.07); }
+  tr.reject  { background:rgba(179,38,30,.07); }
+  tr.edit    { background:rgba(178,106,0,.08); }
+  .chip { display:inline-block; border-radius:999px; padding:0 .55em; font-size:.72rem;
+    border:1px solid var(--border); background:var(--chip); color:var(--muted); white-space:nowrap; }
+  .st-characterized { background:rgba(47,125,50,.12); color:var(--ok); border-color:rgba(47,125,50,.3); }
+  .st-needs-review { background:rgba(178,106,0,.12); color:var(--warn); border-color:rgba(178,106,0,.3); }
+  .st-rejected { background:rgba(179,38,30,.12); color:var(--bad); border-color:rgba(179,38,30,.3); }
+  .v1 { color:var(--ok); font-weight:700; } .v05 { color:var(--warn); font-weight:700; }
+  .v0 { color:var(--bad); font-weight:700; } .vn { color:var(--muted); }
+  .quote { color:var(--fg); border-left:3px solid var(--border); padding-left:8px; max-width:340px; }
+  .just { color:var(--muted); max-width:320px; }
+  .src { color:var(--muted); font-size:.72rem; }
+  .clamp { max-height:3.4em; overflow:hidden; }
+  .clamp.clampable { cursor:pointer; }
+  .clamp.open { max-height:none; }
+  .more-hint { display:inline-block; margin-top:3px; font-size:.68rem; color:var(--link);
+    cursor:pointer; user-select:none; }
+  .more-hint:hover { text-decoration:underline; }
+  .more-hint[hidden] { display:none; }
+  .cellwide { min-width:150px; }
+  .rev { min-width:230px; }
+  .models { padding:7px 22px; border-bottom:1px solid var(--border); background:#fbfaf8;
+    font-size:.8rem; color:var(--muted); }
+  .models .mlabel { text-transform:uppercase; letter-spacing:.04em; font-size:.66rem; font-weight:700;
+    color:var(--accent); margin-right:10px; }
+  .models b { color:var(--fg); font-weight:600; }
+  .models .mtag { color:var(--fg); font-size:.76rem; overflow-wrap:anywhere; }
+  .rev .btns { display:flex; gap:4px; margin-bottom:5px; }
+  .rev .btns button { padding:2px 8px; font-size:.78rem; }
+  .rev .btns button.on-approve { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .rev .btns button.on-reject { background:var(--bad); color:#fff; border-color:var(--bad); }
+  .rev .btns button.on-edit { background:var(--warn); color:#fff; border-color:var(--warn); }
+  .rev textarea { width:100%; min-height:34px; font:inherit; font-size:.78rem; padding:4px;
+    border:1px solid var(--border); border-radius:5px; resize:vertical; }
+  .rev select { width:100%; margin-top:4px; font-size:.78rem; }
+  .hidden { display:none; }
+  a { color:var(--link); text-decoration:none; } a:hover { text-decoration:underline; }
+  .legend { margin:12px 22px 0; border:1px solid var(--border); border-radius:8px; background:#fbfaf8; }
+  .legend > summary { cursor:pointer; padding:9px 13px; font-weight:700; color:var(--accent);
+    list-style:none; }
+  .legend > summary::-webkit-details-marker { display:none; }
+  .legend > summary::before { content:"▸ "; color:var(--muted); }
+  .legend[open] > summary::before { content:"▾ "; }
+  .legend-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:8px 20px; padding:2px 16px 16px; }
+  .lgroup h4 { margin:8px 0 4px; font-size:.74rem; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:3px; }
+  .lgroup dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
+  .lgroup dt { font-weight:700; font-size:.76rem; color:var(--fg); white-space:nowrap; }
+  .lgroup dd { margin:0; font-size:.76rem; color:var(--muted); line-height:1.3; }
+</style></head>
+<body>
+<header>
+  <div class="eyebrow">CP-Tech Concept Graph</div>
+  <h1>Review — BEFORE re-parenting (4 misplaced concepts)</h1>
+  <div class="sub">4 edges · 4 need review · 0 characterized. Adjudicate
+    each edge, add comments, then export your decisions. Decisions are saved in this browser.</div>
+</header>
+<div style="background:#fbf3e6;border-bottom:1px solid #e4e0da;padding:12px 22px;font-size:.85rem;color:#5b6472;line-height:1.5;">
+  <b style="color:#b26a00;">Snapshot BEFORE re-parenting.</b> gpt-oss:120b flagged these 4 concepts
+  <b>misplaced</b> (verdict&nbsp;0.5) under their original parents. They have since been re-parented,
+  and now validate + characterize cleanly &mdash; see <a href="review.html">review.html</a> for the
+  resolved state. Moves applied:
+  <ul style="margin:8px 0 2px;">
+    <li><b>Blended Cement</b>: <code>supplementary-cementitious-materials</code> &rarr; <code>cementitious-materials-and-chemistry</code></li>
+    <li><b>Composite Pavement</b>: <code>concrete-overlay</code> &rarr; <code>preservation-and-rehabilitation</code></li>
+    <li><b>Mercury Intrusion Porosimetry</b>: <code>aggregates</code> &rarr; <code>transport-properties-and-permeability</code></li>
+    <li><b>Ternary Mixture</b>: <code>supplementary-cementitious-materials</code> &rarr; <code>mix-design-and-specialty-mixtures</code></li>
+  </ul>
+</div>
+<div class="toolbar">
+  <label>Show <select id="f-status">
+    <option value="review">needs review + rejected</option>
+    <option value="all">all edges</option>
+    <option value="characterized">characterized</option>
+    <option value="needs-review">needs-review</option>
+    <option value="rejected">rejected</option>
+    <option value="undecided">undecided by me</option>
+  </select></label>
+  <label>Stage <select id="f-stage"><option value="">any</option></select></label>
+  <label>Family <select id="f-type"><option value="">any</option></select></label>
+  <input type="text" id="f-search" placeholder="search parent / child / text…">
+  <span class="spacer"></span>
+  <span class="counts" id="counts"></span>
+  <button id="exp-csv">Export CSV</button>
+  <button id="exp-json">Export JSON</button>
+  <button id="clear">Clear my decisions</button>
+</div>
+<div class="models"><span class="mlabel">LLM evaluators</span>
+  <b>validate:</b> <span class="mtag">gpt-oss:120b</span> &nbsp;·&nbsp;
+  <b>characterize:</b> <span class="mtag">—</span></div>
+<details class="legend">
+  <summary>Legend — what the coded column values mean</summary>
+  <div class="legend-grid"><div class="lgroup"><h4>Status</h4><dl><dt>characterized</dt><dd>accepted into the graph — a validated, typed edge (the cited quote is best-effort, not a verbatim-grounding guarantee — issue #13)</dd><dt>needs-review</dt><dd>held back for a human to adjudicate</dd><dt>rejected</dt><dd>validate judged the connection invalid</dd></dl></div><div class="lgroup"><h4>Stage (who flagged it)</h4><dl><dt>validate</dt><dd>does the connection make sense? — the judge, gpt-oss:120b, before typing</dd><dt>characterize</dt><dd>what relation is it, with a grounded quote? — Qwen3.6 (questions→retrieve→detect)</dd><dt>structural</dt><dd>deterministic tree check (parent/child consistency)</dd></dl></div><div class="lgroup"><h4>Relation family (characterize)</h4><dl><dt>taxonomic</dt><dd>child is a kind/subtype/method/subtopic/instance of parent</dd><dt>compositional</dt><dd>child is a component/material/step of parent</dd><dt>attributive</dt><dd>child is a property or parameter of parent</dd><dt>evaluative</dt><dd>child is a test/method/model/metric that measures or analyzes parent</dd><dt>causal</dt><dd>cause/effect/mitigation relation (semantic direction is in the reading)</dd><dt>unknown</dt><dd>the model could not determine the relation</dd></dl></div><div class="lgroup"><h4>Valid relationship (validate)</h4><dl><dt>1.0</dt><dd>valid — the child clearly belongs under this parent</dd><dt>0.5</dt><dd>unsure — plausible but weak, or better placed elsewhere</dd><dt>0.0</dt><dd>invalid — the connection is wrong</dd><dt>—</dt><dd>not judged (stage not run, or the model errored)</dd></dl></div><div class="lgroup"><h4>Review reason</h4><dl><dt>redundant</dt><dd>child duplicates a sibling or the parent</dd><dt>misplaced</dt><dd>child is real but belongs under a different parent</dd><dt>unsupported</dt><dd>plausible, but the cited quote is not grounded in the evidence</dd><dt>invalid</dt><dd>the link does not make sense</dd><dt>structural</dt><dd>the parent/child link is malformed (dangling parent, mismatch, cycle)</dd><dt>unknown</dt><dd>the model could not determine the relation family</dd><dt>type-disagreement</dt><dd>a model panel reached no majority on the family</dd><dt>error</dt><dd>the model failed after retries</dd></dl></div><div class="lgroup"><h4>Grounding mode (deterministic)</h4><dl><dt>report-backed</dt><dd>the child cites ≥1 report whose text is on disk</dd><dt>page-only</dt><dd>the child cites no resolvable report</dd><dt>unavailable</dt><dd>no evidence text at all (should not occur)</dd></dl></div><div class="lgroup"><h4>Grounding assessment (validate model)</h4><dl><dt>entailed</dt><dd>the evidence supports the connection</dd><dt>neutral</dt><dd>the evidence neither supports nor contradicts it</dd><dt>contradicted</dt><dd>the evidence argues against the connection</dd></dl></div><div class="lgroup"><h4>Suggested action</h4><dl><dt>accept</dt><dd>looks good — no change needed</dd><dt>merge</dt><dd>combine with the duplicate sibling/parent</dd><dt>re-parent</dt><dd>move the child under a different parent</dd><dt>add-evidence</dt><dd>find supporting evidence, or re-type the edge</dd><dt>drop</dt><dd>remove the edge</dd><dt>fix-tree</dt><dd>correct the hierarchy structure</dd><dt>classify</dt><dd>a human assigns / confirms the relation family</dd><dt>retry</dt><dd>re-run the model</dd></dl></div></div>
+</details>
+<div class="wrap">
+  <table>
+    <thead><tr>
+      <th>Parent</th><th>Child</th><th>Status</th><th>Stage</th><th>Relation (family · label)</th><th>Valid relationship</th>
+      <th>Review reason</th><th>Grounding mode</th><th>Grounding assess.</th><th>Struct. ok</th>
+      <th>Suggested action</th><th>Top evidence</th><th>Reading / justification</th><th class="rev">My review</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+<script>
+  const EDGES = [{"id": "aggregates->mercury-intrusion-porosimetry", "parent": "aggregates", "parent_title": "Aggregates", "child": "mercury-intrusion-porosimetry", "child_title": "Mercury Intrusion Porosimetry", "status": "needs-review", "stage": "validate", "validate_model": "gpt-oss:120b", "characterize_model": "", "relation_type": "", "relation_type_bare": "", "verdict": 0.5, "review_reason": "misplaced", "grounding_mode": "report-backed", "grounding_assessment": "neutral", "structural_ok": true, "top_evidence_quote": "", "top_evidence_source": "", "justification": "Mercury Intrusion Porosimetry is a laboratory testing method used to characterize the pore structure of aggregates, but it is not itself an aggregate nor a subclass of aggregates. The evidence cites MIP as a technique applied to aggregates, which supports its relevance to the topic but does not justify placing it under the \"Aggregates\" category. Therefore the link is plausible in context (the method relates to aggregates) yet organizationally misplaced; it would be better situated under a testing\u2011methods or material\u2011characterization node.", "suggested_action": "re-parent"}, {"id": "concrete-overlay->composite-pavement", "parent": "concrete-overlay", "parent_title": "Concrete Overlay", "child": "composite-pavement", "child_title": "Composite Pavement", "status": "needs-review", "stage": "validate", "validate_model": "gpt-oss:120b", "characterize_model": "", "relation_type": "", "relation_type_bare": "", "verdict": 0.5, "review_reason": "misplaced", "grounding_mode": "report-backed", "grounding_assessment": "neutral", "structural_ok": true, "top_evidence_quote": "", "top_evidence_source": "", "justification": "Composite pavement is a type of pavement structure (PCC base with an asphalt surface) rather than a concrete\u2011overlay technique. The evidence notes that thin unbonded PCC overlays can be placed on composite pavements, indicating a *relationship* (overlays may be applied to such pavements) but not that a composite pavement is itself a subclass of concrete overlay. Therefore the child does not logically belong under the parent; it would fit better under a broader \u201cPavement Types\u201d or \u201cComposite Structures\u201d node.", "suggested_action": "re-parent"}, {"id": "supplementary-cementitious-materials->blended-cement", "parent": "supplementary-cementitious-materials", "parent_title": "Supplementary Cementitious Materials", "child": "blended-cement", "child_title": "Blended Cement", "status": "needs-review", "stage": "validate", "validate_model": "gpt-oss:120b", "characterize_model": "", "relation_type": "", "relation_type_bare": "", "verdict": 0.5, "review_reason": "misplaced", "grounding_mode": "report-backed", "grounding_assessment": "entailed", "structural_ok": true, "top_evidence_quote": "", "top_evidence_source": "", "justification": "The child page defines blended cement as a product created by intergrinding OPC with one or more supplementary cementitious materials, so the evidence clearly links the two concepts. However, blended cement is a type of cement (a manufactured binder) rather than an SCM itself; it represents a use of SCMs, not a member of the SCM family. Consequently, while the relationship exists, classifying blended cement as a direct child of the SCM category is debatable and may be better placed under a broader \u201cCement Types\u201d or \u201cBlended Cements\u201d node.", "suggested_action": "re-parent"}, {"id": "supplementary-cementitious-materials->ternary-mixture", "parent": "supplementary-cementitious-materials", "parent_title": "Supplementary Cementitious Materials", "child": "ternary-mixture", "child_title": "Ternary Mixture", "status": "needs-review", "stage": "validate", "validate_model": "gpt-oss:120b", "characterize_model": "", "relation_type": "", "relation_type_bare": "", "verdict": 0.5, "review_reason": "misplaced", "grounding_mode": "report-backed", "grounding_assessment": "neutral", "structural_ok": true, "top_evidence_quote": "", "top_evidence_source": "", "justification": "A ternary mixture is a concrete blend that incorporates two supplementary cementitious materials together with Portland cement. While it *uses* SCMs, it is not itself an SCM and therefore does not logically belong as a child of the \u201cSupplementary Cementitious Materials\u201d category. The evidence describes the composition of ternary mixtures but does not support treating them as a subclass of SCMs; they are better placed under mix\u2011design or blended\u2011cement categories.", "suggested_action": "re-parent"}];
+  const VOCAB = ["taxonomic", "compositional", "attributive", "evaluative", "causal", "unknown"];
+  const KEY = "cg-review-v2";
+  const store = JSON.parse(localStorage.getItem(KEY) || "{}");
+  const save = () => localStorage.setItem(KEY, JSON.stringify(store));
+  const esc = s => (s == null ? "" : String(s)).replace(/[&<>"]/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+  // populate stage/family filters
+  const stages = [...new Set(EDGES.map(e => e.stage).filter(Boolean))].sort();
+  const types = [...new Set(EDGES.map(e => e.relation_type_bare).filter(Boolean))].sort();
+  const fillSel = (id, vals) => {
+    const s = document.getElementById(id);
+    vals.forEach(v => { const o = document.createElement("option"); o.value = o.textContent = v; s.appendChild(o); });
+  };
+  fillSel("f-stage", stages); fillSel("f-type", types);
+
+  const vbadge = v => v === 1 ? '<span class="v1">1.0</span>' : v === 0.5 ? '<span class="v05">0.5</span>'
+    : v === 0 ? '<span class="v0">0.0</span>' : '<span class="vn">—</span>';
+
+  function rowHTML(e) {
+    const d = store[e.id] || {};
+    const typeOpts = VOCAB.map(t => `<option value="${t}" ${d.t===t?"selected":""}>${t}</option>`).join("");
+    const ev = e.top_evidence_quote
+      ? `<div class="quote clamp">${esc(e.top_evidence_quote)}</div><span class="more-hint" hidden>▾ view full text</span><div class="src">${esc(e.top_evidence_source)}</div>`
+      : '<span class="src">—</span>';
+    return `<tr id="row-${esc(e.id)}" class="${d.d||""}">
+      <td class="cellwide" title="${esc(e.parent_title)}">${esc(e.parent_title)}</td>
+      <td class="cellwide" title="${esc(e.child_title)}">${esc(e.child_title)}</td>
+      <td><span class="chip st-${e.status}">${esc(e.status)}</span></td>
+      <td>${esc(e.stage)}</td>
+      <td><span class="chip">${esc(e.relation_type) || "—"}</span></td>
+      <td>${vbadge(e.verdict)}</td>
+      <td>${esc(e.review_reason) || "—"}</td>
+      <td>${esc(e.grounding_mode)}</td>
+      <td>${esc(e.grounding_assessment) || "—"}</td>
+      <td>${e.structural_ok ? "yes" : '<b style="color:var(--bad)">no</b>'}</td>
+      <td>${esc(e.suggested_action) || "—"}</td>
+      <td>${ev}</td>
+      <td class="just"><div class="clamp">${esc(e.justification) || "—"}</div><span class="more-hint" hidden>▾ view full text</span></td>
+      <td class="rev">
+        <div class="btns" data-id="${esc(e.id)}">
+          <button data-d="approve" class="${d.d==="approve"?"on-approve":""}">✓ Approve</button>
+          <button data-d="reject" class="${d.d==="reject"?"on-reject":""}">✗ Reject</button>
+          <button data-d="edit" class="${d.d==="edit"?"on-edit":""}">✎ Edit</button>
+        </div>
+        <select class="corr ${d.d==="edit"?"":"hidden"}" data-id="${esc(e.id)}">
+          <option value="">— corrected family —</option>${typeOpts}
+        </select>
+        <textarea class="cmt" data-id="${esc(e.id)}" placeholder="comment…">${esc(d.c||"")}</textarea>
+      </td></tr>`;
+  }
+
+  function filtered() {
+    const st = document.getElementById("f-status").value;
+    const stg = document.getElementById("f-stage").value;
+    const ty = document.getElementById("f-type").value;
+    const q = document.getElementById("f-search").value.toLowerCase();
+    return EDGES.filter(e => {
+      if (st === "review" && !(e.status === "needs-review" || e.status === "rejected")) return false;
+      if (["characterized","needs-review","rejected"].includes(st) && e.status !== st) return false;
+      if (st === "undecided" && (store[e.id] && store[e.id].d)) return false;
+      if (stg && e.stage !== stg) return false;
+      if (ty && e.relation_type_bare !== ty) return false;
+      if (q) { const hay = (e.parent_title+" "+e.child_title+" "+e.justification+" "+e.top_evidence_quote+" "+e.review_reason).toLowerCase();
+        if (!hay.includes(q)) return false; }
+      return true;
+    });
+  }
+
+  function markClampable() {
+    // show the "view full text" hint only where a cell is actually truncated
+    document.querySelectorAll("#tbody .clamp").forEach(c => {
+      const hint = c.parentNode.querySelector(".more-hint");
+      const over = c.scrollHeight > c.clientHeight + 2;
+      c.classList.toggle("clampable", over);
+      if (over) c.title = "Click to view full text";
+      if (hint) hint.hidden = !over;
+    });
+  }
+  function render() {
+    const rows = filtered();
+    document.getElementById("tbody").innerHTML = rows.map(rowHTML).join("");
+    markClampable();
+    const decided = Object.values(store).filter(x => x.d).length;
+    const ap = Object.values(store).filter(x => x.d === "approve").length;
+    const rj = Object.values(store).filter(x => x.d === "reject").length;
+    const ed = Object.values(store).filter(x => x.d === "edit").length;
+    document.getElementById("counts").innerHTML =
+      `showing <b>${rows.length}</b> · decided <b>${decided}</b> (✓${ap} ✗${rj} ✎${ed})`;
+  }
+
+  // events (delegated)
+  document.getElementById("tbody").addEventListener("click", ev => {
+    const b = ev.target.closest(".btns button");
+    if (b) { const id = b.parentNode.dataset.id, d = b.dataset.d;
+      store[id] = store[id] || {}; store[id].d = (store[id].d === d ? null : d); save();
+      render(); return; }
+    const hint = ev.target.closest(".more-hint");
+    const clampEl = ev.target.closest(".clamp");
+    const c = (clampEl && clampEl.classList.contains("clampable")) ? clampEl
+            : (hint ? hint.parentNode.querySelector(".clamp") : null);
+    if (c) { const open = c.classList.toggle("open");
+      const h = c.parentNode.querySelector(".more-hint");
+      if (h) h.textContent = open ? "▴ show less" : "▾ view full text"; }
+  });
+  document.getElementById("tbody").addEventListener("input", ev => {
+    const t = ev.target;
+    if (t.classList.contains("cmt")) { const id=t.dataset.id; store[id]=store[id]||{}; store[id].c=t.value; save(); }
+    if (t.classList.contains("corr")) { const id=t.dataset.id; store[id]=store[id]||{}; store[id].t=t.value; save(); }
+  });
+  ["f-status","f-stage","f-type"].forEach(id => document.getElementById(id).onchange = render);
+  document.getElementById("f-search").oninput = render;
+  document.getElementById("clear").onclick = () => {
+    if (confirm("Clear all your decisions and comments in this browser?")) {
+      Object.keys(store).forEach(k => delete store[k]); save(); render();
+    }
+  };
+
+  function download(name, text, type) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  }
+  const COLS = ["parent","child","status","stage","validate_model","characterize_model",
+    "relation_type","verdict","review_reason","grounding_mode","grounding_assessment","structural_ok",
+    "suggested_action","top_evidence_quote","top_evidence_source","justification"];
+  document.getElementById("exp-csv").onclick = () => {
+    const q = s => '"' + String(s==null?"":s).replace(/"/g,'""') + '"';
+    const head = [...COLS, "expert_decision","expert_corrected_family","expert_comment"];
+    const lines = [head.map(q).join(",")];
+    EDGES.forEach(e => { const d = store[e.id] || {};
+      lines.push([...COLS.map(c => q(e[c])), q(d.d||""), q(d.t||""), q(d.c||"")].join(",")); });
+    download("concept-graph-review.csv", lines.join("\n"), "text/csv");
+  };
+  document.getElementById("exp-json").onclick = () => {
+    const out = EDGES.map(e => ({ ...Object.fromEntries(COLS.map(c => [c, e[c]])),
+      expert: store[e.id] || {} }));
+    download("concept-graph-review.json", JSON.stringify(out, null, 2), "application/json");
+  };
+
+  render();
+</script>
+</body></html>
