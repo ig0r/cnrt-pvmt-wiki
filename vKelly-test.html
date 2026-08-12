@@ -189,6 +189,15 @@ sup a { text-decoration: none; color: var(--link); }
 .comments { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 .comments h2 { color: var(--accent); border: none; margin: 0 0 .75rem; font-size: 1.1rem; }
 .comments iframe { width: 100%; border: 0; min-height: 320px; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
 </style>
 </head>
 <body>
@@ -272,6 +281,7 @@ sup a { text-decoration: none; color: var(--link); }
 <iframe data-tally-src="https://tally.so/embed/NpN6lW?url=https%3A%2F%2Fig0r.github.io%2Fcnrt-pvmt-wiki%2FvKelly-test.html&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1" loading="lazy" width="100%" frameborder="0" title="Feedback form for this page"></iframe>
 <script async src="https://tally.so/widgets/embed.js"></script>
 </section>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
 </main>
 </div>
 <script>
